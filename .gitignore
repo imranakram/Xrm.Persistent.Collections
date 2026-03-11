@@ -289,3 +289,8 @@ __pycache__/
 /src/AkavacheLiteApp
 /src/AkavacheLite/push-package.ps1
 /src/AkavacheLite/nuget.exe
+/QUICK_REFERENCE.md
+/NAMESPACE_CLEANUP_SUMMARY.md
+/KNOWN_ISSUES_AND_ROADMAP.md
+/UPGRADE_SUMMARY.md
+/GITHUB_ACTIONS_VALIDATION.md

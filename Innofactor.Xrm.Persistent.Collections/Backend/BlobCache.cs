@@ -1,4 +1,4 @@
-﻿namespace Innofactor.Xrm.Persistent.Collections.Backend
+﻿namespace Xrm.Persistent.Collections.Backend
 {
     using System;
     using System.Linq;

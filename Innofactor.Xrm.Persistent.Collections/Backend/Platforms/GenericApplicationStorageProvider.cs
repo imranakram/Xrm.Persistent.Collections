@@ -1,4 +1,4 @@
-﻿namespace Innofactor.Xrm.Persistent.Collections.Backend.Platforms
+﻿namespace Xrm.Persistent.Collections.Backend.Platforms
 {
     using System;
     using System.IO;

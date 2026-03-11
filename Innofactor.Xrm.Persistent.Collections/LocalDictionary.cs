@@ -1,4 +1,4 @@
-﻿namespace Innofactor.Xrm.Persistent.Collections
+﻿namespace Xrm.Persistent.Collections
 {
     using System;
     using System.Collections;
@@ -7,7 +7,7 @@
     using System.Text;
     using Backend;
     using Newtonsoft.Json;
-    using Xrm.Json.Serialization;
+    using global::Xrm.Json.Serialization;
 
     public class LocalDictionary<T> : IDictionary<string, T>, IDisposable
     {

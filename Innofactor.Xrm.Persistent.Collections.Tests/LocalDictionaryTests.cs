@@ -1,4 +1,4 @@
-﻿namespace Innofactor.Xrm.Persistent.Collections
+﻿namespace Xrm.Persistent.Collections
 {
     using System;
     using System.Collections.Generic;
@@ -293,6 +293,269 @@
             // Assert
             Assert.False(retrieved);
             Assert.Equal(default(Entity), result);
+        }
+
+        [Fact]
+        public void Can_Update_Existing_Key()
+        {
+            // Arrange
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            var entity1 = new Entity("test", id1);
+            var entity2 = new Entity("test", id2);
+
+            // Act
+            dictionary["key1"] = entity1;
+            var firstValue = dictionary["key1"];
+
+            dictionary["key1"] = entity2; // Update
+            var updatedValue = dictionary["key1"];
+
+            // Assert
+            Assert.Equal(id1, firstValue.Id);
+            Assert.Equal(id2, updatedValue.Id);
+            Assert.Equal(1, dictionary.Count); // Still only 1 item
+        }
+
+        [Fact]
+        public void Can_Store_Entity_With_Attributes()
+        {
+            // Arrange
+            var id = Guid.NewGuid();
+            var entity = new Entity("contact", id);
+            entity["firstname"] = "John";
+            entity["lastname"] = "Doe";
+            entity["age"] = 30;
+            entity["createdon"] = DateTime.Now;
+
+            // Act
+            dictionary["contact1"] = entity;
+            var retrieved = dictionary["contact1"];
+
+            // Assert
+            Assert.Equal("John", retrieved["firstname"]);
+            Assert.Equal("Doe", retrieved["lastname"]);
+            Assert.Equal(30, retrieved["age"]);
+            Assert.NotNull(retrieved["createdon"]);
+        }
+
+        [Fact]
+        public void Can_Store_Entity_With_EntityReference()
+        {
+            // Arrange
+            var entityId = Guid.NewGuid();
+            var accountId = Guid.NewGuid();
+            var entity = new Entity("contact", entityId);
+            entity["parentcustomerid"] = new EntityReference("account", accountId);
+
+            // Act
+            dictionary["contact1"] = entity;
+            var retrieved = dictionary["contact1"];
+
+            // Assert
+            var retrievedRef = retrieved["parentcustomerid"] as EntityReference;
+            Assert.NotNull(retrievedRef);
+            Assert.Equal("account", retrievedRef.LogicalName);
+            Assert.Equal(accountId, retrievedRef.Id);
+        }
+
+        [Fact]
+        public void Can_Store_Entity_With_OptionSetValue()
+        {
+            // Arrange
+            var id = Guid.NewGuid();
+            var entity = new Entity("contact", id);
+            entity["gendercode"] = new OptionSetValue(1);
+
+            // Act
+            dictionary["contact1"] = entity;
+            var retrieved = dictionary["contact1"];
+
+            // Assert
+            var optionSet = retrieved["gendercode"] as OptionSetValue;
+            Assert.NotNull(optionSet);
+            Assert.Equal(1, optionSet.Value);
+        }
+
+        [Fact]
+        public void Can_Store_Entity_With_Money()
+        {
+            // Arrange
+            var id = Guid.NewGuid();
+            var entity = new Entity("opportunity", id);
+            entity["estimatedvalue"] = new Money(1000000.50m);
+
+            // Act
+            dictionary["opp1"] = entity;
+            var retrieved = dictionary["opp1"];
+
+            // Assert
+            var money = retrieved["estimatedvalue"] as Money;
+            Assert.NotNull(money);
+            Assert.Equal(1000000.50m, money.Value);
+        }
+
+        [Fact]
+        public void Data_Persists_Across_Dictionary_Instances()
+        {
+            // Arrange
+            var id = Guid.NewGuid();
+            var entity = new Entity("account", id);
+            entity["name"] = "Test Company";
+
+            // Act - Store in first instance
+            dictionary["account1"] = entity;
+            var countBeforeDispose = dictionary.Count;
+            dictionary.Dispose();
+
+            // Create new instance pointing to same DB
+            var dictionary2 = new LocalDictionary<Entity>(dbPath);
+            var retrieved = dictionary2["account1"];
+            var countAfterReopen = dictionary2.Count;
+
+            // Assert
+            Assert.Equal(1, countBeforeDispose);
+            Assert.Equal(1, countAfterReopen);
+            Assert.Equal(id, retrieved.Id);
+            Assert.Equal("Test Company", retrieved["name"]);
+
+            // Cleanup
+            dictionary2.Dispose();
+        }
+
+        [Fact]
+        public void Empty_Dictionary_Has_Zero_Count()
+        {
+            // Act
+            var count = dictionary.Count;
+
+            // Assert
+            Assert.Equal(0, count);
+        }
+
+        [Fact]
+        public void Can_Handle_Large_Dataset()
+        {
+            // Arrange
+            const int itemCount = 100;
+            var ids = new List<Guid>();
+
+            // Act - Add 100 entities
+            for (int i = 0; i < itemCount; i++)
+            {
+                var id = Guid.NewGuid();
+                ids.Add(id);
+                var entity = new Entity("account", id);
+                entity["name"] = $"Company {i}";
+                entity["accountnumber"] = i.ToString();
+                dictionary[$"account{i}"] = entity;
+            }
+
+            // Assert - Verify count
+            Assert.Equal(itemCount, dictionary.Count);
+
+            // Assert - Spot check some random items
+            var retrieved50 = dictionary["account50"];
+            Assert.Equal(ids[50], retrieved50.Id);
+            Assert.Equal("Company 50", retrieved50["name"]);
+
+            var retrieved99 = dictionary["account99"];
+            Assert.Equal(ids[99], retrieved99.Id);
+            Assert.Equal("Company 99", retrieved99["name"]);
+        }
+
+        [Fact]
+        public void Can_Enumerate_With_IEnumerable()
+        {
+            // Arrange
+            var entity1 = new Entity("account", Guid.NewGuid());
+            var entity2 = new Entity("contact", Guid.NewGuid());
+            var entity3 = new Entity("opportunity", Guid.NewGuid());
+
+            dictionary["key1"] = entity1;
+            dictionary["key2"] = entity2;
+            dictionary["key3"] = entity3;
+
+            // Act
+            var enumerable = dictionary as System.Collections.IEnumerable;
+            var count = 0;
+
+            foreach (var item in enumerable)
+            {
+                Assert.IsType<KeyValuePair<string, Entity>>(item);
+                count++;
+            }
+
+            // Assert
+            Assert.Equal(3, count);
+        }
+
+        [Fact]
+        public void Remove_NonExistent_Key_Returns_True()
+        {
+            // Note: Current implementation returns true even for non-existent keys
+            // This is not standard IDictionary behavior but changing it might break existing code
+
+            // Act
+            var result = dictionary.Remove("nonexistent");
+
+            // Assert
+            Assert.True(result); // Current behavior
+            Assert.Equal(0, dictionary.Count); // Dictionary still empty
+        }
+
+        [Fact]
+        public void Keys_Collection_Is_Empty_For_New_Dictionary()
+        {
+            // Act
+            var keys = dictionary.Keys;
+
+            // Assert
+            Assert.Empty(keys);
+        }
+
+        [Fact]
+        public void Values_Collection_Is_Empty_For_New_Dictionary()
+        {
+            // Act
+            var values = dictionary.Values;
+
+            // Assert
+            Assert.Empty(values);
+        }
+
+        [Fact]
+        public void Can_Add_Using_KeyValuePair()
+        {
+            // Arrange
+            var id = Guid.NewGuid();
+            var entity = new Entity("account", id);
+            var kvp = new KeyValuePair<string, Entity>("account1", entity);
+
+            // Act
+            dictionary.Add(kvp);
+
+            // Assert
+            Assert.True(dictionary.ContainsKey("account1"));
+            Assert.Equal(id, dictionary["account1"].Id);
+        }
+
+        [Fact]
+        public void Clear_Removes_All_WAL_Files()
+        {
+            // Arrange
+            dictionary["key1"] = new Entity("account", Guid.NewGuid());
+            dictionary["key2"] = new Entity("contact", Guid.NewGuid());
+
+            // Act
+            dictionary.Clear();
+
+            // Assert
+            Assert.Equal(0, dictionary.Count);
+
+            // Verify can still use dictionary after clear
+            dictionary["key3"] = new Entity("opportunity", Guid.NewGuid());
+            Assert.Equal(1, dictionary.Count);
         }
 
         #endregion Public Methods

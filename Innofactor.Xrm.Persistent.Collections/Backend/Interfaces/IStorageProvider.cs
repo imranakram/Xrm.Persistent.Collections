@@ -1,4 +1,4 @@
-﻿namespace Innofactor.Xrm.Persistent.Collections.Backend.Interfaces
+﻿namespace Xrm.Persistent.Collections.Backend.Interfaces
 {
     public interface IStorageProvider
     {

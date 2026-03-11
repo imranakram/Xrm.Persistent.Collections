@@ -1,0 +1,122 @@
+name: Publish NuGet Package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 2.0.0)'
+        required: true
+      nuget_api_key_secret:
+        description: 'GitHub secret name for NuGet API key'
+        required: true
+        default: 'NUGET_API_KEY'
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1.3
+    
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1
+      with:
+        nuget-version: 'latest'
+    
+    - name: Determine version
+      id: version
+      run: |
+        if ("${{ github.event_name }}" -eq "release") {
+          $version = "${{ github.event.release.tag_name }}".TrimStart('v')
+        } else {
+          $version = "${{ github.event.inputs.version }}"
+        }
+        echo "version=$version" >> $env:GITHUB_OUTPUT
+        echo "Version: $version"
+    
+    - name: Restore NuGet packages
+      run: nuget restore Xrm.Persistent.Collections.sln
+    
+    - name: Build solution
+      run: msbuild Xrm.Persistent.Collections.sln /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
+    
+    - name: Run tests
+      run: |
+        dotnet test "Innofactor.Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" `
+          --configuration Release `
+          --no-build `
+          --verbosity normal
+    
+    - name: Update .nuspec version
+      run: |
+        $version = "${{ steps.version.outputs.version }}"
+        $nuspecPath = "Xrm.Persistent.Collections.nuspec"
+        $content = Get-Content $nuspecPath -Raw
+        $content = $content -replace '<version>.*</version>', "<version>$version</version>"
+        Set-Content $nuspecPath $content
+    
+    - name: Pack NuGet package
+      run: nuget pack Xrm.Persistent.Collections.nuspec -OutputDirectory .\artifacts
+    
+    - name: Publish to NuGet.org
+      env:
+        NUGET_API_KEY: ${{ secrets[github.event.inputs.nuget_api_key_secret] || secrets.NUGET_API_KEY }}
+      run: |
+        $nupkg = Get-ChildItem .\artifacts\*.nupkg | Select-Object -First 1
+        nuget push $nupkg.FullName -ApiKey $env:NUGET_API_KEY -Source https://api.nuget.org/v3/index.json
+    
+    - name: Upload NuGet package artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-package
+        path: artifacts/*.nupkg
+        retention-days: 90
+    
+    - name: Create release notes
+      run: |
+        $version = "${{ steps.version.outputs.version }}"
+        $notes = @"
+        ## Xrm.Persistent.Collections v$version
+        
+        ### Installation
+        ``````powershell
+        Install-Package Xrm.Persistent.Collections -Version $version
+        ``````
+        
+        ### Changes
+        See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for full details.
+        
+        ### Compatibility
+        - .NET Framework 4.8
+        - Dynamics 365 Online
+        - Dynamics 365 OnPrem 9.1+
+        
+        ### Support
+        - Issues: https://github.com/${{ github.repository }}/issues
+        - Documentation: https://github.com/${{ github.repository }}/wiki
+        "@
+        
+        Set-Content -Path release-notes.md -Value $notes
+    
+    - name: Comment on release
+      if: github.event_name == 'release'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const notes = fs.readFileSync('release-notes.md', 'utf8');
+          
+          github.rest.repos.updateReleaseAsset({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            release_id: context.payload.release.id,
+            body: notes
+          });

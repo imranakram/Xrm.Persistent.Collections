@@ -1,4 +1,4 @@
-﻿namespace Innofactor.Xrm.Persistent.Collections.Backend.Structure
+﻿namespace Xrm.Persistent.Collections.Backend.Structure
 {
     internal class DateQueryResult
     {
