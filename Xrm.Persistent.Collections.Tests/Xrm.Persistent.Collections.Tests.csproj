@@ -150,7 +150,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Innofactor.Xrm.Persistent.Collections\Xrm.Persistent.Collections.csproj">
+    <ProjectReference Include="..\Xrm.Persistent.Collections\Xrm.Persistent.Collections.csproj">
       <Project>{e7314541-3d26-4c7b-aa5a-50c8e5635a25}</Project>
       <Name>Xrm.Persistent.Collections</Name>
     </ProjectReference>

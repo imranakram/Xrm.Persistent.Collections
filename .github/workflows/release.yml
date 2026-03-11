@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version number (e.g., 2.0.0)'
+        description: 'Version number in CalVer format (e.g., 2.2025.1.15)'
         required: true
       prerelease:
         description: 'Is this a pre-release?'
@@ -39,11 +39,12 @@ jobs:
     - name: Validate version format
       run: |
         $version = "${{ github.event.inputs.version }}"
-        if ($version -notmatch '^\d+\.\d+\.\d+$') {
-          Write-Error "Invalid version format. Use semantic versioning (e.g., 2.0.0)"
+        # CalVer format: MAJOR.YYYY.M.D (e.g., 1.2022.10.3 or 2.2025.1.15)
+        if ($version -notmatch '^\d+\.\d{4}\.\d{1,2}\.\d{1,2}$') {
+          Write-Error "Invalid version format. Use CalVer format: MAJOR.YYYY.M.D (e.g., 2.2025.1.15)"
           exit 1
         }
-        Write-Host "Version $version is valid"
+        Write-Host "Version $version is valid (CalVer format)"
     
     - name: Check if tag exists
       run: |
@@ -61,13 +62,15 @@ jobs:
       run: |
         $version = "${{ github.event.inputs.version }}"
         $assemblyInfo = "Innofactor.Xrm.Persistent.Collections\Properties\AssemblyInfo.cs"
-        
+
+        # CalVer format already has 4 parts (MAJOR.YYYY.M.D)
+        # AssemblyVersion needs exactly 4 parts, so use as-is
         $content = Get-Content $assemblyInfo -Raw
-        $content = $content -replace 'AssemblyVersion\("[\d.]+"\)', "AssemblyVersion(`"$version.0`")"
-        $content = $content -replace 'AssemblyFileVersion\("[\d.]+"\)', "AssemblyFileVersion(`"$version.0`")"
+        $content = $content -replace 'AssemblyVersion\("[\d.]+"\)', "AssemblyVersion(`"$version`")"
+        $content = $content -replace 'AssemblyFileVersion\("[\d.]+"\)', "AssemblyFileVersion(`"$version`")"
         Set-Content $assemblyInfo $content
-        
-        Write-Host "Updated AssemblyInfo to version $version"
+
+        Write-Host "Updated AssemblyInfo to CalVer version $version"
     
     - name: Restore NuGet packages
       run: nuget restore Xrm.Persistent.Collections.sln

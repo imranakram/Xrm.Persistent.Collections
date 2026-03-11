@@ -123,7 +123,7 @@ using Xrm.Persistent.Collections;
 
 | From Version | To Version | Breaking Changes | Migration Effort | Database Compatible |
 |--------------|------------|------------------|------------------|---------------------|
-| 1.0.0 | 2.0.0 | Namespace only | Low (1-2 hours) | ✅ Yes |
+| 1.2022.10.3 | 2.2025.1.15 | Namespace only | Low (1-2 hours) | ✅ Yes |
 
 ---
 
@@ -144,7 +144,7 @@ using Xrm.Persistent.Collections;
 - Proper null handling in TryGetValue
 - Bulk operations support
 
-### [4.0.0] - 2026 (Planned)
+### [4.2026.1.0] - 2026 (Planned)
 - Multi-backend support (Cosmos DB, Redis, SQL Server)
 - Distributed caching
 - Advanced features (compression, encryption)
