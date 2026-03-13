@@ -35,7 +35,7 @@ jobs:
     
     - name: Run tests with coverage
       run: |
-        dotnet test "Innofactor.Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" `
+        dotnet test "Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" `
           --configuration Debug `
           --no-build `
           --verbosity normal `
@@ -62,20 +62,12 @@ jobs:
         recreate: true
         path: code-coverage-results.md
     
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        files: ./coverage/**/coverage.cobertura.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
-    
     - name: Analyze code metrics
       run: |
         Write-Host "Code Metrics Analysis"
         Write-Host "====================="
         
-        $sourceFiles = Get-ChildItem -Path "Innofactor.Xrm.Persistent.Collections" -Filter "*.cs" -Recurse | 
+        $sourceFiles = Get-ChildItem -Path "Xrm.Persistent.Collections" -Filter "*.cs" -Recurse | 
           Where-Object { $_.FullName -notmatch "\\obj\\|\\bin\\|AssemblyInfo" }
         
         $totalLines = 0
@@ -98,7 +90,7 @@ jobs:
     - name: Check for TODOs
       run: |
         Write-Host "Checking for TODO comments..."
-        $todos = Get-ChildItem -Path "Innofactor.Xrm.Persistent.Collections" -Filter "*.cs" -Recurse | 
+        $todos = Get-ChildItem -Path "Xrm.Persistent.Collections" -Filter "*.cs" -Recurse | 
           Select-String -Pattern "//\s*TODO:" | 
           Select-Object Path, LineNumber, Line
         
@@ -121,7 +113,7 @@ jobs:
       run: |
         Write-Host "Checking for outdated NuGet packages..."
         
-        $packagesConfig = "Innofactor.Xrm.Persistent.Collections\packages.config"
+        $packagesConfig = "Xrm.Persistent.Collections\packages.config"
         if (Test-Path $packagesConfig) {
           [xml]$packages = Get-Content $packagesConfig
           

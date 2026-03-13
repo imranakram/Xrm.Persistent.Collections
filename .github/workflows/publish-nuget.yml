@@ -50,7 +50,7 @@ jobs:
     
     - name: Run tests
       run: |
-        dotnet test "Innofactor.Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" `
+        dotnet test "Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" `
           --configuration Release `
           --no-build `
           --verbosity normal

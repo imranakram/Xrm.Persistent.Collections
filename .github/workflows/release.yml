@@ -61,7 +61,7 @@ jobs:
     - name: Update version in AssemblyInfo
       run: |
         $version = "${{ github.event.inputs.version }}"
-        $assemblyInfo = "Innofactor.Xrm.Persistent.Collections\Properties\AssemblyInfo.cs"
+        $assemblyInfo = "Xrm.Persistent.Collections\Properties\AssemblyInfo.cs"
 
         # CalVer format already has 4 parts (MAJOR.YYYY.M.D)
         # AssemblyVersion needs exactly 4 parts, so use as-is
@@ -80,7 +80,7 @@ jobs:
     
     - name: Run tests
       run: |
-        dotnet test "Innofactor.Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" `
+        dotnet test "Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" `
           --configuration Release `
           --no-build `
           --verbosity normal

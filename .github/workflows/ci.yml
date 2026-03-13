@@ -37,7 +37,7 @@ jobs:
     
     - name: Run tests
       run: |
-        dotnet test "Innofactor.Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" `
+        dotnet test "Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" `
           --configuration Release `
           --no-build `
           --verbosity normal `
@@ -57,6 +57,6 @@ jobs:
       with:
         name: build-artifacts
         path: |
-          Innofactor.Xrm.Persistent.Collections\bin\Release\*.dll
-          Innofactor.Xrm.Persistent.Collections\bin\Release\*.pdb
+          Xrm.Persistent.Collections\bin\Release\*.dll
+          Xrm.Persistent.Collections\bin\Release\*.pdb
         retention-days: 7
