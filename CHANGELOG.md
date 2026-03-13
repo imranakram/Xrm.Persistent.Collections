@@ -23,7 +23,8 @@ This is a major upgrade bringing the library to modern standards while maintaini
   - `KNOWN_ISSUES_AND_ROADMAP.md` - Future improvements
   - `QUICK_REFERENCE.md` - Integration checklist
 - GitHub Actions CI/CD pipelines
-- Updated README with examples and usage guide
+- **Enhanced README** with 8 detailed use case scenarios
+- Support for **AliasedValue**, **OptionSetValueCollection**, and **BooleanManagedProperty** via updated Xrm.Json.Serialization
 
 ### Changed
 - **BREAKING: Namespace** - Removed "Innofactor" prefix from all namespaces
@@ -33,19 +34,27 @@ This is a major upgrade bringing the library to modern standards while maintaini
   - Better performance (15-25% improvement)
   - TLS 1.2/1.3 support by default
   - Improved async/await debugging
-- **SQLite**: Updated from 1.6.292 to 1.9.172
+- **SQLite**: Updated sqlite-net-pcl from 1.6.292 to 1.9.172
   - ~10-15% faster query execution
   - Better connection pooling
   - Improved WAL checkpoint management
 - **SQLitePCLRaw**: Updated from 1.1.13 to 2.1.10
-  - Replaced bundle_green with bundle_e_sqlite3
+  - Replaced deprecated bundle_green with bundle_e_sqlite3
   - More stable native binaries
+  - Security patches and bug fixes
+  - Added SQLitePCLRaw.provider.dynamic_cdecl (required by bundle_e_sqlite3)
 - **xUnit**: Updated from 2.4.1 to 2.9.3
-  - Latest testing framework
+  - Latest testing framework (released 2024)
   - Better Visual Studio integration
+  - Improved test runner performance
+  - Updated analyzers to 1.18.0 (from 0.10.0) - **required for xunit 2.9.3**
+  - Added Microsoft.TestPlatform.ObjectModel 17.12.0 - **required for xunit.runner.visualstudio 3.0.0**
 - **Newtonsoft.Json**: Updated to 13.0.4
 - **Microsoft.CrmSdk.CoreAssemblies**: Updated to 9.0.2.60
 - **Xrm.Json.Serialization**: Updated to 1.2026.3.1
+  - **NEW:** AliasedValue support (FetchXML linked entities)
+  - **NEW:** OptionSetValueCollection support (multi-select picklists)
+  - **NEW:** BooleanManagedProperty support
 - Assembly version: 1.0.0.0 → 2.0.0.0
 - Copyright: Updated to 2019-2025
 - Assembly description: Added proper description
@@ -125,29 +134,6 @@ using Xrm.Persistent.Collections;
 |--------------|------------|------------------|------------------|---------------------|
 | 1.2022.10.3 | 2.2025.1.15 | Namespace only | Low (1-2 hours) | ✅ Yes |
 
----
-
-## Planned Releases
-
-### [2.1.0] - Q2 2025 (Planned)
-- Add XML documentation comments
-- Add logging interface
-- Better error handling for connection initialization
-- Configuration options
-- Performance telemetry
-
-### [3.0.0] - Q4 2025 (Planned)
-- Migrate to .NET 8
-- Add async API (IAsyncDictionary)
-- Support for IAsyncEnumerable
-- Fix Remove() method behavior
-- Proper null handling in TryGetValue
-- Bulk operations support
-
-### [4.2026.1.0] - 2026 (Planned)
-- Multi-backend support (Cosmos DB, Redis, SQL Server)
-- Distributed caching
-- Advanced features (compression, encryption)
 
 ---
 
