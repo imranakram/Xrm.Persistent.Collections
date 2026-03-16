@@ -314,7 +314,7 @@
             // Assert
             Assert.Equal(id1, firstValue.Id);
             Assert.Equal(id2, updatedValue.Id);
-            Assert.Equal(1, dictionary.Count); // Still only 1 item
+            Assert.Single(dictionary); // Still only 1 item
         }
 
         [Fact]
@@ -501,7 +501,7 @@
 
             // Assert
             Assert.True(result); // Current behavior
-            Assert.Equal(0, dictionary.Count); // Dictionary still empty
+            Assert.Empty(dictionary); // Dictionary still empty
         }
 
         [Fact]
@@ -551,11 +551,11 @@
             dictionary.Clear();
 
             // Assert
-            Assert.Equal(0, dictionary.Count);
+            Assert.Empty(dictionary);
 
             // Verify can still use dictionary after clear
             dictionary["key3"] = new Entity("opportunity", Guid.NewGuid());
-            Assert.Equal(1, dictionary.Count);
+            Assert.Single(dictionary);
         }
 
         #endregion Public Methods
