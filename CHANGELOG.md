@@ -18,6 +18,8 @@ This is a major upgrade bringing the library to modern standards while maintaini
   - Large dataset handling (100+ items)
   - Edge cases and error scenarios
   - Collection interfaces
+  - **New (v2.0.1):** Bug fix validation tests (KeyNotFoundException behavior)
+  - **New (v2.0.1):** `GetAll()` and `GetAllKeys()` method tests (6 additional tests)
 - Comprehensive documentation:
   - `UPGRADE_SUMMARY.md` - Detailed upgrade information
   - `KNOWN_ISSUES_AND_ROADMAP.md` - Future improvements
@@ -25,6 +27,8 @@ This is a major upgrade bringing the library to modern standards while maintaini
 - GitHub Actions CI/CD pipelines
 - **Enhanced README** with 8 detailed use case scenarios
 - Support for **AliasedValue**, **OptionSetValueCollection**, and **BooleanManagedProperty** via updated Xrm.Json.Serialization
+- **New (v2.0.1):** `IBlobCache.GetAll()` method - Get all non-expired items regardless of type
+- **New (v2.0.1):** `IBlobCache.GetAllKeys()` method - Get all non-expired keys with type metadata
 
 ### Changed
 - **BREAKING: Namespace** - Removed "Innofactor" prefix from all namespaces
@@ -58,10 +62,15 @@ This is a major upgrade bringing the library to modern standards while maintaini
 - Assembly version: 1.0.0.0 → 2.0.0.0
 - Copyright: Updated to 2019-2025
 - Assembly description: Added proper description
+- **Changed (v2.0.1):** `LocalDictionary.Contains()` and `LocalDictionary.ContainsKey()` now use `GetOrDefault()` instead of `Get()` to avoid throwing exceptions on missing keys
 
 ### Fixed
 - Namespace resolution issue with `Xrm.Json.Serialization` (added `global::`)
 - Assembly metadata (title, product name, description)
+- **Fixed (v2.0.1):** Critical bug in `PersistentBlobCache.Get()` - `KeyNotFoundException` now correctly thrown when key not found (was never thrown due to empty array return value)
+- **Fixed (v2.0.1):** Security/reliability issue in `PersistentBlobCache.GetAllKeys()` - `Type.GetType()` now uses safe reflection with null handling and `throwOnError: false`
+- **Fixed (v2.0.1):** `LocalDictionary.TryGetValue()` now correctly handles wrapped exceptions from async operations
+- **Removed (v2.0.1):** Obsolete TODO comments and outdated code
 
 ### Compatible With
 - ✅ .NET Framework 4.8
