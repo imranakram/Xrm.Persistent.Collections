@@ -1,4 +1,4 @@
-﻿namespace Xrm.Persistent.Collections
+namespace Xrm.Persistent.Collections
 {
     using System;
     using System.Collections;
@@ -117,20 +117,23 @@
 
         public bool Contains(KeyValuePair<string, T> item)
         {
-            var task = cache.Get(item.Key.ToString());
+            var task = cache.GetOrDefault(item.Key.ToString(), string.Empty);
             task.Wait();
 
-            // TODO: Maybe compare as strings instead?
-            // TODO: Calculate MD5 for both values and compare those?
+            if (task.Result == null || task.Result.Length == 0)
+            {
+                return false;
+            }
+
             return task.Result.SequenceEqual(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(item.Value)));
         }
 
         public bool ContainsKey(string key)
         {
-            var task = cache.Get(key);
+            var task = cache.GetOrDefault(key, string.Empty);
             task.Wait();
 
-            return task.Result.Length > 0;
+            return task.Result != null && task.Result.Length > 0;
         }
 
         public void CopyTo(KeyValuePair<string, T>[] array, int arrayIndex)
@@ -196,8 +199,12 @@
             }
             catch (Backend.KeyNotFoundException)
             {
-                // Will this ever happen?
-                // PersistentBlobCache.GetOrDefault returns empty byte array if the key wasn't found
+                // This happens when the key doesn't exist or has expired
+                return false;
+            }
+            catch (AggregateException ex) when (ex.InnerException is Backend.KeyNotFoundException)
+            {
+                // This happens when the key doesn't exist or has expired (wrapped in AggregateException from .Wait())
                 return false;
             }
         }

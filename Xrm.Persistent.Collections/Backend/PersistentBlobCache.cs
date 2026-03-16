@@ -89,7 +89,7 @@
         public async Task<byte[]> Get(string key, string type)
         {
             var item = await GetOrDefault(key, type).ConfigureAwait(false);
-            if (item == null)
+            if (item == null || item.Length == 0)
             {
                 throw new KeyNotFoundException(key);
             }

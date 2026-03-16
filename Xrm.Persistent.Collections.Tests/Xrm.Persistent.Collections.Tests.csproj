@@ -204,6 +204,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="LocalDictionaryTests.cs" />
+    <Compile Include="PersistentBlobCacheTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SQLiteVersionTests.cs" />
   </ItemGroup>
