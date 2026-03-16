@@ -14,8 +14,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # Full history for versioning
-    
+        fetch-depth: 0
+
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v1.3
     
@@ -36,14 +36,15 @@ jobs:
           --configuration Release `
           --no-build `
           --verbosity normal `
-          --logger "trx;LogFileName=test-results.trx"
+          --logger "trx;LogFileName=test-results.trx" `
+          --results-directory ./test-results
     
     - name: Publish test results
       uses: dorny/test-reporter@v1
       if: always()
       with:
         name: Test Results
-        path: '**/test-results.trx'
+        path: 'test-results/test-results.trx'
         reporter: dotnet-trx
     
     - name: Upload build artifacts
