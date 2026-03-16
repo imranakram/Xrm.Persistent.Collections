@@ -159,7 +159,7 @@
                     .Select(p => p.Data);
             });
 
-        // TODO: add to interface
+        /// <inheritdoc/>
         public Task<IEnumerable<byte[]>> GetAll() =>
             Read(o =>
             {
@@ -172,7 +172,7 @@
                     .Select(p => p.Data);
             });
 
-        // TODO: add to interface
+        /// <inheritdoc/>
         public Task<IEnumerable<KeyResult>> GetAllKeys()
         {
             var query = @"
@@ -186,7 +186,7 @@
                     .Select(p => new KeyResult
                     {
                         Key = p.Key,
-                        Type = Type.GetType(p.Type)  // todo: test this
+                        Type = string.IsNullOrEmpty(p.Type) ? null : Type.GetType(p.Type, throwOnError: false)
                     });
             });
         }

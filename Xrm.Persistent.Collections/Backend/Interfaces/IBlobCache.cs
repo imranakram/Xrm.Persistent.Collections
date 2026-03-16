@@ -46,6 +46,20 @@
         Task<IEnumerable<byte[]>> GetAll(string type);
 
         /// <summary>
+        /// Get all non-expired items regardless of type.
+        /// Warning: May be expensive for large caches.
+        /// </summary>
+        /// <returns>All non-expired cache item data</returns>
+        Task<IEnumerable<byte[]>> GetAll();
+
+        /// <summary>
+        /// Get all non-expired keys with their type information.
+        /// Useful for cache introspection and enumeration.
+        /// </summary>
+        /// <returns>All non-expired keys with type metadata</returns>
+        Task<IEnumerable<Structure.KeyResult>> GetAllKeys();
+
+        /// <summary>
         /// Return the time which an item was created
         /// </summary>
         /// <param name="key"></param>
@@ -59,9 +73,12 @@
         /// <returns></returns>
         Task<IDictionary<string, DateTimeOffset?>> GetCreatedAt(IEnumerable<string> keys);
 
-        //// Return a list of all keys. Use for debugging purposes only.
-        //Task<IEnumerable<string>> GetAllKeys();
-        // Return the time which an object of type T was created
+        /// <summary>
+        /// Return the time which an object of type T was created
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="key"></param>
+        /// <returns></returns>
         Task<DateTimeOffset?> GetObjectCreatedAt<T>(string key);
 
         /// <summary>

@@ -2,8 +2,10 @@ namespace Xrm.Persistent.Collections.Backend
 {
     using System;
     using System.IO;
+    using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
+    using Structure;
     using Xunit;
 
     public class PersistentBlobCacheTests : IDisposable
@@ -182,6 +184,104 @@ namespace Xrm.Persistent.Collections.Backend
             // Assert
             await Assert.ThrowsAsync<KeyNotFoundException>(
                 async () => await cache.Get("invalidate-key"));
+        }
+
+        [Fact]
+        public async Task GetAll_Returns_All_Non_Expired_Items()
+        {
+            // Arrange
+            await cache.CreateConnection();
+            await cache.Insert("key1", Encoding.UTF8.GetBytes("value1"));
+            await cache.Insert("key2", Encoding.UTF8.GetBytes("value2"));
+            await cache.Insert("key3", Encoding.UTF8.GetBytes("value3"));
+
+            // Act
+            var results = await cache.GetAll();
+
+            // Assert
+            Assert.Equal(3, results.Count());
+        }
+
+        [Fact]
+        public async Task GetAll_Returns_Empty_When_No_Items()
+        {
+            // Arrange
+            await cache.CreateConnection();
+
+            // Act
+            var results = await cache.GetAll();
+
+            // Assert
+            Assert.Empty(results);
+        }
+
+        [Fact]
+        public async Task GetAllKeys_Returns_All_Non_Expired_Keys()
+        {
+            // Arrange
+            await cache.CreateConnection();
+            await cache.Insert("key1", Encoding.UTF8.GetBytes("value1"));
+            await cache.Insert("key2", Encoding.UTF8.GetBytes("value2"));
+            await cache.Insert("key3", Encoding.UTF8.GetBytes("value3"));
+
+            // Act
+            var results = await cache.GetAllKeys();
+            var keys = results.Select(r => r.Key).ToList();
+
+            // Assert
+            Assert.Equal(3, keys.Count);
+            Assert.Contains("key1", keys);
+            Assert.Contains("key2", keys);
+            Assert.Contains("key3", keys);
+        }
+
+        [Fact]
+        public async Task GetAllKeys_Returns_Empty_When_No_Items()
+        {
+            // Arrange
+            await cache.CreateConnection();
+
+            // Act
+            var results = await cache.GetAllKeys();
+
+            // Assert
+            Assert.Empty(results);
+        }
+
+        [Fact]
+        public async Task GetAll_Excludes_Expired_Items()
+        {
+            // Arrange
+            await cache.CreateConnection();
+            await cache.Insert("valid-key", Encoding.UTF8.GetBytes("valid"));
+            await cache.Insert("expired-key", Encoding.UTF8.GetBytes("expired"),
+                DateTimeOffset.UtcNow.AddMilliseconds(-100)); // Already expired
+
+            // Act
+            var results = await cache.GetAll();
+
+            // Assert
+            Assert.Single(results);
+            Assert.Equal("valid", Encoding.UTF8.GetString(results.First()));
+        }
+
+        [Fact]
+        public async Task GetAllKeys_Excludes_Expired_Keys()
+        {
+            // Arrange
+            await cache.CreateConnection();
+            await cache.Insert("valid-key", Encoding.UTF8.GetBytes("valid"));
+            await cache.Insert("expired-key", Encoding.UTF8.GetBytes("expired"),
+                DateTimeOffset.UtcNow.AddMilliseconds(-100)); // Already expired
+
+            // Act
+            var results = await cache.GetAllKeys();
+            var keys = results.Select(r => r.Key).ToList();
+
+            // Assert
+            Assert.Single(keys);
+            Assert.Contains("valid-key", keys);
+            Assert.DoesNotContain("expired-key", keys);
         }
 
         #endregion Public Methods
