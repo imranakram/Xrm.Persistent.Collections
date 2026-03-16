@@ -11,6 +11,7 @@ namespace Xrm.Persistent.Collections.Tests
             using (var db = new SQLiteConnection(":memory:"))
             {
                 var version = db.ExecuteScalar<string>("select sqlite_version();");
+                System.Diagnostics.Trace.WriteLine($"SQLite engine version: {version}");
                 Assert.False(string.IsNullOrWhiteSpace(version));
             }
         }
