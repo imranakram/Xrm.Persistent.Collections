@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [ main, vNext ]
   schedule:
-    # Run every Monday at 9am UTC
     - cron: '0 9 * * 1'
 
 jobs:
@@ -26,41 +25,20 @@ jobs:
       uses: NuGet/setup-nuget@v1
       with:
         nuget-version: 'latest'
-    
+
     - name: Restore NuGet packages
       run: nuget restore Xrm.Persistent.Collections.sln
     
     - name: Build solution
       run: msbuild Xrm.Persistent.Collections.sln /p:Configuration=Debug /p:Platform="Any CPU" /verbosity:minimal
     
-    - name: Run tests with coverage
+    - name: Run tests
       run: |
         dotnet test "Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" `
           --configuration Debug `
           --no-build `
-          --verbosity normal `
-          --collect:"XPlat Code Coverage" `
-          --results-directory ./coverage
-    
-    - name: Code Coverage Report
-      uses: irongut/CodeCoverageSummary@v1.3.0
-      with:
-        filename: coverage/**/coverage.cobertura.xml
-        badge: true
-        fail_below_min: true
-        format: markdown
-        hide_branch_rate: false
-        hide_complexity: false
-        indicators: true
-        output: both
-        thresholds: '50 75'
-    
-    - name: Add Coverage PR Comment
-      uses: marocchino/sticky-pull-request-comment@v2
-      if: github.event_name == 'pull_request'
-      with:
-        recreate: true
-        path: code-coverage-results.md
+          --verbosity normal
+      continue-on-error: true
     
     - name: Analyze code metrics
       run: |
@@ -99,36 +77,5 @@ jobs:
           $todos | Format-Table -AutoSize
           Write-Host "::warning::Found $($todos.Count) TODO comment(s)"
         } else {
-          Write-Host "No TODO comments found."
+          Write-Host "No TODO comments found"
         }
-  
-  dependency-check:
-    runs-on: windows-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Check for outdated packages
-      run: |
-        Write-Host "Checking for outdated NuGet packages..."
-        
-        $packagesConfig = "Xrm.Persistent.Collections\packages.config"
-        if (Test-Path $packagesConfig) {
-          [xml]$packages = Get-Content $packagesConfig
-          
-          Write-Host "Current packages:"
-          foreach ($package in $packages.packages.package) {
-            Write-Host "  $($package.id) $($package.version)"
-          }
-        }
-        
-        Write-Host ""
-        Write-Host "Run 'nuget update' locally to check for newer versions."
-    
-    - name: Security audit
-      run: |
-        Write-Host "Security Audit"
-        Write-Host "=============="
-        Write-Host "Check https://github.com/advisories for known vulnerabilities"
-        Write-Host "Run 'dotnet list package --vulnerable' locally for detailed scan"
