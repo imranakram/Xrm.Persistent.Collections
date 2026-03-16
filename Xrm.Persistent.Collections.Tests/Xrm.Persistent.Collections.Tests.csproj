@@ -82,18 +82,6 @@
     <Reference Include="microsoft.identitymodel, Version=3.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.IdentityModel.7.0.0\lib\net35\microsoft.identitymodel.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Testing.Extensions.MSBuild, Version=1.9.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Testing.Platform.MSBuild.1.9.1\lib\netstandard2.0\Microsoft.Testing.Extensions.MSBuild.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Testing.Extensions.Telemetry, Version=1.9.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Testing.Extensions.Telemetry.1.9.1\lib\netstandard2.0\Microsoft.Testing.Extensions.Telemetry.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Testing.Extensions.TrxReport.Abstractions, Version=1.9.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Testing.Extensions.TrxReport.Abstractions.1.9.1\lib\netstandard2.0\Microsoft.Testing.Extensions.TrxReport.Abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Testing.Platform, Version=1.9.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.Testing.Platform.1.9.1\lib\netstandard2.0\Microsoft.Testing.Platform.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.TestPlatform.CoreUtilities, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.TestPlatform.ObjectModel.17.10.0\lib\net462\Microsoft.TestPlatform.CoreUtilities.dll</HintPath>
     </Reference>
@@ -114,10 +102,6 @@
     </Reference>
     <Reference Include="SQLite-net, Version=1.9.172.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\sqlite-net-pcl.1.9.172\lib\netstandard2.0\SQLite-net.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="SQLitePCLRaw.batteries_green, Version=2.1.2.1721, Culture=neutral, PublicKeyToken=a84b7dcfb1391f7f, processorArchitecture=MSIL">
-      <HintPath>..\packages\SQLitePCLRaw.bundle_green.2.1.11\lib\net461\SQLitePCLRaw.batteries_green.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="SQLitePCLRaw.batteries_v2, Version=2.1.11.2622, Culture=neutral, PublicKeyToken=8226ea5df37bcae9, processorArchitecture=MSIL">
@@ -247,11 +231,6 @@
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\xunit.runner.visualstudio.2.8.2\build\net462\xunit.runner.visualstudio.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\xunit.runner.visualstudio.2.8.2\build\net462\xunit.runner.visualstudio.props'))" />
-    <Error Condition="!Exists('..\packages\Microsoft.Testing.Platform.1.9.1\build\netstandard2.0\Microsoft.Testing.Platform.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Testing.Platform.1.9.1\build\netstandard2.0\Microsoft.Testing.Platform.props'))" />
-    <Error Condition="!Exists('..\packages\Microsoft.Testing.Platform.1.9.1\build\netstandard2.0\Microsoft.Testing.Platform.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Testing.Platform.1.9.1\build\netstandard2.0\Microsoft.Testing.Platform.targets'))" />
-    <Error Condition="!Exists('..\packages\Microsoft.Testing.Platform.MSBuild.1.9.1\build\Microsoft.Testing.Platform.MSBuild.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Testing.Platform.MSBuild.1.9.1\build\Microsoft.Testing.Platform.MSBuild.props'))" />
-    <Error Condition="!Exists('..\packages\Microsoft.Testing.Platform.MSBuild.1.9.1\build\Microsoft.Testing.Platform.MSBuild.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Testing.Platform.MSBuild.1.9.1\build\Microsoft.Testing.Platform.MSBuild.targets'))" />
-    <Error Condition="!Exists('..\packages\Microsoft.Testing.Extensions.Telemetry.1.9.1\build\netstandard2.0\Microsoft.Testing.Extensions.Telemetry.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Testing.Extensions.Telemetry.1.9.1\build\netstandard2.0\Microsoft.Testing.Extensions.Telemetry.props'))" />
   </Target>
   <Target Name="CopySQLitePclRawAssemblies" AfterTargets="Build">
     <ItemGroup>
@@ -266,6 +245,4 @@
     <Copy SourceFiles="@(_SQLitePclRawNative)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(_SQLitePclRawNative)' != ''" />
     <Copy SourceFiles="@(_AdditionalRuntimeAssemblies)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(_AdditionalRuntimeAssemblies)' != ''" />
   </Target>
-  <Import Project="..\packages\Microsoft.Testing.Platform.1.9.1\build\netstandard2.0\Microsoft.Testing.Platform.targets" Condition="Exists('..\packages\Microsoft.Testing.Platform.1.9.1\build\netstandard2.0\Microsoft.Testing.Platform.targets')" />
-  <Import Project="..\packages\Microsoft.Testing.Platform.MSBuild.1.9.1\build\Microsoft.Testing.Platform.MSBuild.targets" Condition="Exists('..\packages\Microsoft.Testing.Platform.MSBuild.1.9.1\build\Microsoft.Testing.Platform.MSBuild.targets')" />
 </Project>

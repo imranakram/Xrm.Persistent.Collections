@@ -15,14 +15,6 @@
         private static Lazy<IBlobCache> _localMachine;
         private static IStorageProvider _storageProvider;
         private static Lazy<IBlobCache> _userAccount;
-        //static Lazy<ISecureBlobCache> _secure;
-
-        private static IBlobCache localMachine;
-
-        //static ISecureBlobCache secure;
-        private static bool shutdownRequested;
-
-        private static IBlobCache userAccount;
 
         #endregion Private Fields
 
@@ -34,8 +26,6 @@
                 new PersistentBlobCache(GetDatabasePath(ApplicationName, StorageLocation.Temporary)));
             _userAccount = new Lazy<IBlobCache>(() =>
                 new PersistentBlobCache(GetDatabasePath(ApplicationName, StorageLocation.User)));
-            //_secure = new Lazy<ISecureBlobCache>(() =>
-            //    new SQLitePersistentBlobCache(GetDatabasePath(ApplicationName, StorageLocation.Secure)));
         }
 
         #endregion Public Constructors
