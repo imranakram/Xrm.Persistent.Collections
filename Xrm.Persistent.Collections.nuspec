@@ -57,8 +57,8 @@
     </dependencies>
   </metadata>
   <files>
-    <file src="Xrm.Persistent.Collections\bin\Release\Xrm.Persistent.Collections.dll" target="lib\net48" />
-    <file src="Xrm.Persistent.Collections\bin\Release\Xrm.Persistent.Collections.pdb" target="lib\net48" />
+    <file src="Xrm.Persistent.Collections\bin\x64\Release\Xrm.Persistent.Collections.dll" target="lib\net48" />
+    <file src="Xrm.Persistent.Collections\bin\x64\Release\Xrm.Persistent.Collections.pdb" target="lib\net48" />
     <file src="README.md" target="" />
     <file src="CHANGELOG.md" target="" />
     <file src="LICENSE" target="" />

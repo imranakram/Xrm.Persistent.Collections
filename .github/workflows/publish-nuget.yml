@@ -34,7 +34,7 @@ jobs:
       run: nuget restore Xrm.Persistent.Collections.sln
 
     - name: Build solution in Release mode
-      run: msbuild Xrm.Persistent.Collections.sln /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
+      run: msbuild Xrm.Persistent.Collections.sln /p:Configuration=Release /p:Platform=x64 /verbosity:minimal
 
     - name: Run tests
       shell: pwsh

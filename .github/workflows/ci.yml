@@ -26,7 +26,7 @@ jobs:
       run: nuget restore Xrm.Persistent.Collections.sln
 
     - name: Build solution
-      run: msbuild Xrm.Persistent.Collections.sln /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
+      run: msbuild Xrm.Persistent.Collections.sln /p:Configuration=Release /p:Platform=x64 /verbosity:minimal
 
     - name: Run tests
       shell: pwsh
@@ -38,6 +38,6 @@ jobs:
       with:
         name: build-artifacts
         path: |
-          Xrm.Persistent.Collections\bin\Release\*.dll
-          Xrm.Persistent.Collections\bin\Release\*.pdb
+          Xrm.Persistent.Collections\bin\x64\Release\*.dll
+          Xrm.Persistent.Collections\bin\x64\Release\*.pdb
         retention-days: 7
