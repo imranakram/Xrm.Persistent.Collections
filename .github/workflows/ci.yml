@@ -9,63 +9,31 @@ on:
 jobs:
   build-and-test:
     runs-on: windows-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v1.3
-    
     - name: Setup NuGet
-      uses: NuGet/setup-nuget@v1
+      uses: nuget/setup-nuget@v2
       with:
         nuget-version: 'latest'
 
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
     - name: Restore NuGet packages
       run: nuget restore Xrm.Persistent.Collections.sln
-    
+
     - name: Build solution
       run: msbuild Xrm.Persistent.Collections.sln /p:Configuration=Release /p:Platform="Any CPU" /verbosity:minimal
-    
-    - name: Create test results directory
-      run: mkdir -Force test-results
-    
+
     - name: Run tests
+      shell: pwsh
       run: |
-        dotnet test "Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" `
-          --configuration Release `
-          --no-build `
-          --verbosity normal `
-          --logger "trx;LogFileName=test-results.trx" `
-          --results-directory ./test-results
-      continue-on-error: true
-    
-    - name: Debug - List test results
-      if: always()
-      run: |
-        Write-Host "Contents of test-results directory:"
-        if (Test-Path test-results) {
-          Get-ChildItem test-results -Recurse
-        } else {
-          Write-Host "test-results directory not found"
-        }
-        Write-Host "`nSearching for any .trx files:"
-        Get-ChildItem -Filter "*.trx" -Recurse
-    
-    - name: Publish test results
-      uses: dorny/test-reporter@v1
-      if: always()
-      with:
-        name: Test Results
-        path: '**/test-results.trx'
-        reporter: dotnet-trx
-        fail-on-empty: false
-    
+        dotnet test "Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" --configuration Release --no-build --verbosity normal
+
     - name: Upload build artifacts
-      if: success()
       uses: actions/upload-artifact@v4
       with:
         name: build-artifacts
