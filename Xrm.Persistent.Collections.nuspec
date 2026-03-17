@@ -11,6 +11,7 @@
     <projectUrl>https://github.com/imranakram/Xrm.Persistent.Collections</projectUrl>
     <repository type="git" url="https://github.com/imranakram/Xrm.Persistent.Collections.git" branch="main" />
     <icon>icon.png</icon>
+    <readme>README.md</readme>
     <description>
       SQLite-backed persistent collections for Microsoft Dynamics CRM/XRM applications. 
 
