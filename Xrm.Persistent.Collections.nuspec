@@ -10,7 +10,7 @@
     <license type="expression">MIT</license>
     <projectUrl>https://github.com/imranakram/Xrm.Persistent.Collections</projectUrl>
     <repository type="git" url="https://github.com/imranakram/Xrm.Persistent.Collections.git" branch="main" />
-    <icon>images\icon.png</icon>
+    <icon>icon.png</icon>
     <description>
       SQLite-backed persistent collections for Microsoft Dynamics CRM/XRM applications. 
 
