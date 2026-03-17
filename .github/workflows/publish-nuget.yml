@@ -41,6 +41,14 @@ jobs:
       run: |
         dotnet test "Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" --configuration Release --no-build --verbosity normal
 
+    - name: Debug - List build output
+      shell: pwsh
+      run: |
+        Write-Host "=== Listing bin directories ==="
+        Get-ChildItem -Path "Xrm.Persistent.Collections\bin" -Recurse -Include "*.dll","*.pdb" | ForEach-Object { Write-Host $_.FullName }
+        Write-Host "=== Listing root files ==="
+        Get-ChildItem -Path "." -File | ForEach-Object { Write-Host $_.Name }
+
     - name: Update .nuspec version
       shell: pwsh
       run: |

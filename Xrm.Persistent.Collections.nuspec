@@ -57,11 +57,9 @@
     </dependencies>
   </metadata>
   <files>
+    <file src="icon.png" target="" />
+    <file src="README.md" target="" />
     <file src="Xrm.Persistent.Collections\bin\x64\Release\Xrm.Persistent.Collections.dll" target="lib\net48" />
     <file src="Xrm.Persistent.Collections\bin\x64\Release\Xrm.Persistent.Collections.pdb" target="lib\net48" />
-    <file src="README.md" target="" />
-    <file src="CHANGELOG.md" target="" />
-    <file src="LICENSE" target="" />
-    <file src="icon.png" target="images\" />
   </files>
 </package>
