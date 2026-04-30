@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <RunConfiguration>
+    <!-- Force x64 test host for native SQLite libraries -->
+    <TargetPlatform>x64</TargetPlatform>
+    <ResultsDirectory>.\TestResults</ResultsDirectory>
+    <TestSessionTimeout>300000</TestSessionTimeout>
+    <!-- Don't force build output location -->
+    <CollectSourceInformation>true</CollectSourceInformation>
+  </RunConfiguration>
+</RunSettings>

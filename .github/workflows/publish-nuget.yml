@@ -1,0 +1,77 @@
+name: Publish to NuGet
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Extract version from tag
+      id: get_version
+      shell: pwsh
+      run: |
+        $tag = "${{ github.ref_name }}"
+        $version = $tag -replace '^v', ''
+        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+        echo "Version: $version"
+
+    - name: Setup NuGet
+      uses: nuget/setup-nuget@v2
+      with:
+        nuget-version: 'latest'
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Restore NuGet packages
+      run: nuget restore Xrm.Persistent.Collections.sln
+
+    - name: Build solution in Release mode
+      run: msbuild Xrm.Persistent.Collections.sln /p:Configuration=Release /p:Platform=x64 /verbosity:minimal
+
+    - name: Run tests
+      shell: pwsh
+      run: |
+        dotnet test "Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" --configuration Release --no-build --verbosity normal
+
+    - name: Debug - List build output
+      shell: pwsh
+      run: |
+        Write-Host "=== Listing bin directories ==="
+        Get-ChildItem -Path "Xrm.Persistent.Collections\bin" -Recurse -Include "*.dll","*.pdb" | ForEach-Object { Write-Host $_.FullName }
+        Write-Host "=== Listing root files ==="
+        Get-ChildItem -Path "." -File | ForEach-Object { Write-Host $_.Name }
+
+    - name: Update .nuspec version
+      shell: pwsh
+      run: |
+        $version = "${{ steps.get_version.outputs.VERSION }}"
+        $nuspecPath = "Xrm.Persistent.Collections.nuspec"
+        $content = Get-Content $nuspecPath -Raw
+        $content = $content -replace '<version>[\d\.]+</version>', "<version>$version</version>"
+        Set-Content $nuspecPath $content
+        echo "Updated .nuspec to version $version"
+
+    - name: Pack NuGet package
+      run: nuget pack Xrm.Persistent.Collections.nuspec -Properties Configuration=Release
+
+    - name: Push to NuGet
+      run: nuget push *.nupkg -Source https://api.nuget.org/v3/index.json -ApiKey ${{ secrets.NUGET_API_KEY }} -SkipDuplicate
+
+    - name: Upload NuGet package as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-package
+        path: '*.nupkg'
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: '*.nupkg'

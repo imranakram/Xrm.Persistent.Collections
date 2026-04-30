@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, vNext, develop ]
+  pull_request:
+    branches: [ main, vNext ]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup NuGet
+      uses: nuget/setup-nuget@v2
+      with:
+        nuget-version: 'latest'
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Restore NuGet packages
+      run: nuget restore Xrm.Persistent.Collections.sln
+
+    - name: Build solution
+      run: msbuild Xrm.Persistent.Collections.sln /p:Configuration=Release /p:Platform=x64 /verbosity:minimal
+
+    - name: Run tests
+      shell: pwsh
+      run: |
+        dotnet test "Xrm.Persistent.Collections.Tests\Xrm.Persistent.Collections.Tests.csproj" --configuration Release --no-build --verbosity normal
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          Xrm.Persistent.Collections\bin\x64\Release\*.dll
+          Xrm.Persistent.Collections\bin\x64\Release\*.pdb
+        retention-days: 7
