@@ -2,14 +2,14 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata>
     <id>Xrm.Persistent.Collections</id>
-    <version>2.2026.3.1</version>
+    <version>2.2026.9.7</version>
     <title>Xrm Persistent Collections</title>
     <authors>Imran Akram</authors>
     <owners>Imran Akram</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <license type="expression">MIT</license>
     <projectUrl>https://github.com/imranakram/Xrm.Persistent.Collections</projectUrl>
-    <repository type="git" url="https://github.com/imranakram/Xrm.Persistent.Collections.git" branch="main" />
+    <repository type="git" url="https://github.com/imranakram/Xrm.Persistent.Collections.git" branch="master" />
     <icon>icon.png</icon>
     <readme>README.md</readme>
     <description>
@@ -22,38 +22,84 @@
     </description>
     <summary>Persistent dictionary storage for Dynamics CRM/XRM with SQLite backend</summary>
     <releaseNotes>
-      Major upgrade to .NET Framework 4.8 with significant performance improvements (15-25%).
+      Security release. No API changes; existing database files are unaffected.
 
-      Version Format: CalVer (2.YYYY.M.D) - Previous version: 1.2022.10.3
+      Version Format: CalVer (2.YYYY.M.D) - Previous version: 2.2026.3.1
 
-      Breaking Changes:
-      - Namespace changed from Innofactor.Xrm.Persistent.Collections to Xrm.Persistent.Collections
+      Security:
+      - Fixes CVE-2025-6965 / GHSA-2m69-gcr7-jv3q (High, CVSS 7.2) by upgrading
+        SQLitePCLRaw.lib.e_sqlite3 from 2.1.11 to 2.1.13. The 2.1.11 package embeds
+        SQLite 3.49.1; the flaw is fixed in SQLite 3.50.2, and 2.1.13 embeds 3.53.3.
+      - Raises the SQLitePCLRaw.bundle_e_sqlite3 floor from 2.1.10 to 2.1.13 and adds an
+        explicit SQLitePCLRaw.lib.e_sqlite3 floor. Because NuGet resolves lowest-applicable,
+        consumers of the previous release were pulling an unpatched native binary. Projects
+        referencing this package should upgrade.
 
-      Enhancements:
-      - Upgraded to .NET Framework 4.8 (from 4.6.2)
-      - Updated SQLite to 1.9.172 (10-15% faster)
-      - TLS 1.2/1.3 support for Dynamics 365 Online
-      - Doubled test coverage (27 comprehensive tests)
-      - Full backward compatibility with existing database files
+      Removed (unused, no runtime impact):
+      - Microsoft.IdentityModel 7.0.0 (Windows Identity Foundation 3.5, superseded by WIF's
+        integration into .NET 4.5). Nothing in the graph or the source depended on it.
+      - SQLitePCLRaw.config.e_sqlite3 3.0.2, which shipped a conflicting second copy of
+        SQLitePCLRaw.batteries_v2.dll.
+
+      Concurrency fixes:
+      - Reads are now serialized against writes. PersistentBlobCache.Read took no lock while
+        sharing a single non-thread-safe SQLiteConnection with writes.
+      - CreateConnection and Write acquired their semaphore inside the try block, so a
+        throwing WaitAsync released a permit that was never taken.
+      - CreateConnection published the connection before creating the schema, so a caller
+        could query a CacheItem table that did not exist yet.
+      - Get(IEnumerable) and GetObjectsCreatedAt re-enumerated a lazy task sequence, issuing
+        every chunked query against the database twice.
+      - GetObjectsCreatedAt walked its keys argument twice without materializing it, so a
+        single-use sequence produced a partial result.
+
+      AssemblyVersion is now pinned to 2.0.0.0 and no longer tracks the release version, so
+      consumers no longer need a binding redirect for each patch. AssemblyFileVersion carries
+      the release version. Consumers upgrading from 2.2026.3.1 can drop any existing binding
+      redirect for this assembly or retarget it to 2.0.0.0.
+
+      Package dependencies:
+      - The dependency list is rebuilt from the real reference graph. Declared floors that
+        sat below the versions built against have been dropped in favour of the transitive
+        versions Microsoft ships together; the SQLitePCLRaw managed stack (bundle_green,
+        core, provider.dynamic_cdecl) is now declared, since sqlite-net initialises its
+        provider through batteries_v2 and sqlite-net-pcl alone floors that at 2.1.2.
+      - SQLitePCLRaw.bundle_e_sqlite3 is no longer declared and has been removed from the
+        projects. Nothing referenced it, and it supplied a second conflicting copy of
+        SQLitePCLRaw.batteries_v2.dll.
+      - Verified by restoring this package into a fresh net48 project as its only
+        PackageReference and round-tripping a CRM Entity through a real database file.
+
+      Performance:
+      - No measurable change is expected or claimed from the dependency updates.
 
       See CHANGELOG.md for full details.
     </releaseNotes>
-    <copyright>Copyright © 2019-2025</copyright>
+    <copyright>Copyright © 2019-2026</copyright>
     <tags>dynamics crm xrm dynamics365 dataverse sqlite persistence cache dictionary storage job-engine akavache</tags>
     <dependencies>
       <group targetFramework=".NETFramework4.8">
-        <dependency id="Microsoft.Bcl.AsyncInterfaces" version="8.0.0" />
-        <dependency id="Microsoft.CrmSdk.CoreAssemblies" version="9.0.2.60" />
+        <!-- Assemblies this library references directly. -->
         <dependency id="Newtonsoft.Json" version="13.0.4" />
         <dependency id="sqlite-net-pcl" version="1.9.172" />
-        <dependency id="SQLitePCLRaw.bundle_e_sqlite3" version="2.1.10" />
-        <dependency id="System.Buffers" version="4.5.1" />
-        <dependency id="System.Memory" version="4.5.5" />
-        <dependency id="System.Numerics.Vectors" version="4.5.0" />
-        <dependency id="System.Runtime.CompilerServices.Unsafe" version="6.0.0" />
-        <dependency id="System.Threading.Tasks.Extensions" version="4.5.4" />
-        <dependency id="System.ValueTuple" version="4.5.0" />
         <dependency id="Xrm.Json.Serialization" version="1.2026.3.1" />
+
+        <!-- Dynamics types cross this library's API surface through serialization.
+             Declared explicitly rather than leaned on transitively, because it also
+             establishes the floors for System.ServiceModel.Http/Primitives and
+             System.Text.Json (8.0.5, which is the patched build). -->
+        <dependency id="Microsoft.CrmSdk.CoreAssemblies" version="9.0.2.60" />
+
+        <!-- sqlite-net initialises the native provider through SQLitePCLRaw.batteries_v2,
+             which bundle_green supplies. These floors match what this release is built
+             and tested against; sqlite-net-pcl 1.9.172 alone would resolve 2.1.2. -->
+        <dependency id="SQLitePCLRaw.bundle_green" version="2.1.11" />
+        <dependency id="SQLitePCLRaw.core" version="2.1.11" />
+        <dependency id="SQLitePCLRaw.provider.dynamic_cdecl" version="2.1.11" />
+
+        <!-- Security floor for CVE-2025-6965. Must stay explicit: every other path to
+             this package resolves an unpatched native SQLite binary. -->
+        <dependency id="SQLitePCLRaw.lib.e_sqlite3" version="2.1.13" />
       </group>
     </dependencies>
   </metadata>

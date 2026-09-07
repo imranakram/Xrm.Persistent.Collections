@@ -2,9 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [ main, vNext, develop ]
+    branches: [ master, main, vNext, develop ]
   pull_request:
-    branches: [ main, vNext ]
+    # Filters on the target branch. master is the default branch, so without it
+    # no pull request into master was ever built.
+    branches: [ master, main, vNext ]
 
 jobs:
   build-and-test:

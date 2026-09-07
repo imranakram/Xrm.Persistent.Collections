@@ -1,6 +1,8 @@
 namespace Xrm.Persistent.Collections.Backend
 {
     using System;
+    using System.Collections;
+    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Text;
@@ -284,6 +286,162 @@ namespace Xrm.Persistent.Collections.Backend
             Assert.DoesNotContain("expired-key", keys);
         }
 
+        [Fact]
+        public async Task Concurrent_Reads_And_Writes_Do_Not_Throw()
+        {
+            // Arrange
+            await cache.CreateConnection();
+            const int operations = 150;
+
+            // Act - reads and writes issued against the same connection at the same time.
+            // Before reads were serialized against writes, this raced on a shared
+            // SQLiteConnection, which sqlite-net does not guard.
+            var work = new List<Task>();
+            for (var i = 0; i < operations; i++)
+            {
+                var key = "concurrent-" + i;
+                var payload = Encoding.UTF8.GetBytes("value-" + i);
+
+                work.Add(Task.Run(() => cache.Insert(key, payload)));
+                work.Add(Task.Run(() => cache.GetOrDefault(key, string.Empty)));
+                work.Add(Task.Run(() => cache.GetAllKeys()));
+            }
+
+            await Task.WhenAll(work);
+
+            // Assert - every write landed and is readable
+            for (var i = 0; i < operations; i++)
+            {
+                var stored = await cache.Get("concurrent-" + i);
+                Assert.Equal("value-" + i, Encoding.UTF8.GetString(stored));
+            }
+        }
+
+        [Fact]
+        public async Task Concurrent_Operations_On_Unopened_Connection_Do_Not_Throw()
+        {
+            // Arrange - deliberately no CreateConnection() first, so many callers race
+            // to open the connection at once.
+
+            // Act
+            var work = Enumerable.Range(0, 50)
+                .Select(i => Task.Run(async () =>
+                {
+                    await cache.Insert("cold-" + i, Encoding.UTF8.GetBytes("v" + i));
+                    return await cache.GetOrDefault("cold-" + i, string.Empty);
+                }))
+                .ToArray();
+
+            var results = await Task.WhenAll(work);
+
+            // Assert
+            Assert.All(results, r => Assert.NotEmpty(r));
+        }
+
+        [Fact]
+        public async Task Get_With_Keys_Spanning_Multiple_Chunks_Returns_All_Values()
+        {
+            // Arrange - the internal chunk size is 950, so this spans three chunks
+            await cache.CreateConnection();
+            const int count = 2000;
+
+            var items = new Dictionary<string, byte[]>();
+            for (var i = 0; i < count; i++)
+            {
+                items["bulk-" + i] = Encoding.UTF8.GetBytes("payload-" + i);
+            }
+
+            await cache.Insert(items);
+
+            // Act
+            var fetched = await cache.Get(items.Keys);
+
+            // Assert
+            Assert.Equal(count, fetched.Count);
+            for (var i = 0; i < count; i++)
+            {
+                Assert.Equal("payload-" + i, Encoding.UTF8.GetString(fetched["bulk-" + i]));
+            }
+        }
+
+        [Fact]
+        public async Task GetCreatedAt_Enumerates_The_Supplied_Keys_Only_Once()
+        {
+            // Arrange - GetObjectsCreatedAt walks its keys argument twice. Passing a
+            // sequence that refuses a second enumeration pins that behaviour down.
+            await cache.CreateConnection();
+
+            var items = new Dictionary<string, byte[]>();
+            for (var i = 0; i < 20; i++)
+            {
+                items["stamped-" + i] = Encoding.UTF8.GetBytes("v" + i);
+            }
+
+            await cache.Insert(items);
+
+            // Act
+            var stamps = await cache.GetCreatedAt(new SingleUseSequence(items.Keys));
+
+            // Assert - an entry comes back for every key that was supplied
+            Assert.Equal(items.Count, stamps.Count);
+            foreach (var key in items.Keys)
+            {
+                Assert.True(stamps.ContainsKey(key));
+            }
+        }
+
+        [Fact]
+        public async Task Concurrent_CreateConnection_Publishes_A_Fully_Initialised_Connection()
+        {
+            // Arrange - many callers open the connection at once. The connection field is
+            // only assigned after the schema exists, so no caller can observe a connection
+            // whose CacheItem table has not been created yet.
+            var opens = Enumerable.Range(0, 64)
+                .Select(_ => Task.Run(() => cache.CreateConnection()))
+                .ToArray();
+
+            // Act
+            await Task.WhenAll(opens);
+
+            // Assert - the schema is usable immediately afterwards
+            await cache.Insert("after-open", Encoding.UTF8.GetBytes("ok"));
+            var stored = await cache.Get("after-open");
+            Assert.Equal("ok", Encoding.UTF8.GetString(stored));
+        }
+
         #endregion Public Methods
+
+        #region Private Types
+
+        /// <summary>
+        /// A sequence that throws if anything walks it more than once, so that code
+        /// relying on repeated enumeration of a caller-supplied <see cref="IEnumerable{T}"/>
+        /// fails loudly instead of silently returning nothing the second time.
+        /// </summary>
+        private sealed class SingleUseSequence : IEnumerable<string>
+        {
+            private readonly IEnumerable<string> source;
+            private bool enumerated;
+
+            public SingleUseSequence(IEnumerable<string> source)
+            {
+                this.source = source;
+            }
+
+            public IEnumerator<string> GetEnumerator()
+            {
+                if (enumerated)
+                {
+                    throw new InvalidOperationException("Sequence was enumerated more than once.");
+                }
+
+                enumerated = true;
+                return source.GetEnumerator();
+            }
+
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
+        #endregion Private Types
     }
 }
