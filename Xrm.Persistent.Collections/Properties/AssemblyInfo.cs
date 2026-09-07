@@ -32,6 +32,12 @@ using System.Runtime.InteropServices;
 // You can specify all the values or you can default the Build and Revision Numbers
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-// Using CalVer format: MAJOR.YYYY.M.D (e.g., 2.2026.3.2S)
-[assembly: AssemblyVersion("2.2026.9.7")]
+//
+// AssemblyVersion is deliberately pinned to the major version and does NOT track
+// the CalVer release version. It is the identity the CLR binds against, so changing
+// it on every release would force every consuming application to add or update a
+// binding redirect just to pick up a patch. Bump it only on a breaking change.
+//
+// AssemblyFileVersion carries the real release version, in CalVer: MAJOR.YYYY.M.D.
+[assembly: AssemblyVersion("2.0.0.0")]
 [assembly: AssemblyFileVersion("2.2026.9.7")]

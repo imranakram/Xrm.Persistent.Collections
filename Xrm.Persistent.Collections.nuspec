@@ -41,8 +41,25 @@
       - SQLitePCLRaw.config.e_sqlite3 3.0.2, which shipped a conflicting second copy of
         SQLitePCLRaw.batteries_v2.dll.
 
+      Concurrency fixes:
+      - Reads are now serialized against writes. PersistentBlobCache.Read took no lock while
+        sharing a single non-thread-safe SQLiteConnection with writes.
+      - CreateConnection and Write acquired their semaphore inside the try block, so a
+        throwing WaitAsync released a permit that was never taken.
+      - CreateConnection published the connection before creating the schema, so a caller
+        could query a CacheItem table that did not exist yet.
+      - Get(IEnumerable) and GetObjectsCreatedAt re-enumerated a lazy task sequence, issuing
+        every chunked query against the database twice.
+      - GetObjectsCreatedAt walked its keys argument twice without materializing it, so a
+        single-use sequence produced a partial result.
+
+      AssemblyVersion is now pinned to 2.0.0.0 and no longer tracks the release version, so
+      consumers no longer need a binding redirect for each patch. AssemblyFileVersion carries
+      the release version. Consumers upgrading from 2.2026.3.1 can drop any existing binding
+      redirect for this assembly or retarget it to 2.0.0.0.
+
       Performance:
-      - No measurable change is expected or claimed. This release is a security fix.
+      - No measurable change is expected or claimed from the dependency updates.
 
       See CHANGELOG.md for full details.
     </releaseNotes>

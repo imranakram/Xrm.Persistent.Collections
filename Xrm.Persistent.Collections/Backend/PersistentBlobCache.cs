@@ -17,7 +17,14 @@
         private readonly Type _cacheItemType;
         private readonly SemaphoreSlim _createSemaphore;
         private readonly string _databasePath;
-        private readonly SemaphoreSlim _writeSemaphore;
+
+        /// <summary>
+        /// Serializes every operation against <see cref="_db"/>, reads included.
+        /// sqlite-net's <see cref="SQLiteConnection"/> is not thread-safe, and this class
+        /// holds a single connection, so concurrent use has to be serialized here.
+        /// </summary>
+        private readonly SemaphoreSlim _dbSemaphore;
+
         private SQLiteConnection _db;
 
         #endregion Private Fields
@@ -27,7 +34,7 @@
         public PersistentBlobCache(string databasePath)
         {
             _databasePath = databasePath;
-            _writeSemaphore = new SemaphoreSlim(1, 1);
+            _dbSemaphore = new SemaphoreSlim(1, 1);
             _createSemaphore = new SemaphoreSlim(1, 1);
             _cacheItemType = typeof(CacheItem);
         }
@@ -47,9 +54,11 @@
                 return;
             }
 
+            // Acquire outside the try: if WaitAsync throws (for example ObjectDisposedException
+            // after Dispose), the finally must not release a permit that was never taken.
+            await _createSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
-                await _createSemaphore.WaitAsync();
                 if (_db != null)
                 {
                     return;
@@ -61,9 +70,14 @@
                     Directory.CreateDirectory(directory);
                 }
 
-                _db = new SQLiteConnection(_databasePath);
-                _db.ExecuteScalar<string>("PRAGMA journal_mode = WAL");
-                EnsureSchema();
+                // Build the connection in a local and publish it to _db only once the
+                // journal mode and schema are in place. Assigning _db first would let a
+                // caller that sees the field non-null through the fast path above query a
+                // CacheItem table that does not exist yet.
+                var connection = new SQLiteConnection(_databasePath);
+                connection.ExecuteScalar<string>("PRAGMA journal_mode = WAL");
+                EnsureSchema(connection);
+                _db = connection;
             }
             finally
             {
@@ -75,7 +89,7 @@
         {
             _db?.Close();
             _db?.Dispose();
-            _writeSemaphore?.Dispose();
+            _dbSemaphore?.Dispose();
             _createSemaphore?.Dispose();
         }
 
@@ -128,7 +142,8 @@
                                 Data = p.Data
                             });
                     });
-                });
+                })
+                .ToArray();     // materialize: enumerating twice would issue every query again
 
             await Task.WhenAll(tasks).ConfigureAwait(false);
 
@@ -219,7 +234,9 @@
 
         public async Task<IDictionary<string, DateTimeOffset?>> GetObjectsCreatedAt<T>(IEnumerable<string> keys)
         {
-            keys = keys.Distinct();
+            // Materialized because it is enumerated twice below; a one-shot sequence
+            // would otherwise come back empty the second time.
+            keys = keys.Distinct().ToArray();
 
             var utcTicks = DateTime.UtcNow.Ticks;
             var typeName = typeof(T).FullName;
@@ -246,7 +263,8 @@
                         chunkKeys.CopyTo(args, 2);
                         return o.Query<DateQueryResult>(sql, args);
                     });
-                });
+                })
+                .ToArray();     // materialize: enumerating twice would issue every query again
 
             await Task.WhenAll(tasks).ConfigureAwait(false);
             var foundKeys = tasks
@@ -441,7 +459,7 @@
 
         #region Private Methods
 
-        private void EnsureSchema()
+        private static void EnsureSchema(SQLiteConnection connection)
         {
             var tableSQL = @"
                 CREATE TABLE IF NOT EXISTS CacheItem
@@ -454,34 +472,47 @@
                     PRIMARY KEY (Key, Type)
                 ) WITHOUT ROWID;";
 
-            _db.Execute(tableSQL);
+            connection.Execute(tableSQL);
         }
 
         private async Task<T> Read<T>(Func<SQLiteConnection, T> readOperation)
         {
-            if (_db == null)
+            // Reads take the same lock as writes. The connection is shared and sqlite-net
+            // does not guard its own state, so an unsynchronized read can run against a
+            // connection that a concurrent write is mutating.
+            await _dbSemaphore.WaitAsync().ConfigureAwait(false);
+            try
             {
-                await CreateConnection();
-            }
+                if (_db == null)
+                {
+                    await CreateConnection().ConfigureAwait(false);
+                }
 
-            return readOperation(_db);
+                return readOperation(_db);
+            }
+            finally
+            {
+                _dbSemaphore.Release();
+            }
         }
 
         private async Task Write(Action<SQLiteConnection> writeOperation)
         {
+            // Acquire outside the try, so a throwing WaitAsync cannot reach the finally
+            // and release a permit that was never taken.
+            await _dbSemaphore.WaitAsync().ConfigureAwait(false);
             try
             {
-                await _writeSemaphore.WaitAsync();  // todo: safe to configure await here?  ¯\_(ツ)_/¯
                 if (_db == null)
                 {
-                    await CreateConnection();
+                    await CreateConnection().ConfigureAwait(false);
                 }
 
                 writeOperation(_db);
             }
             finally
             {
-                _writeSemaphore.Release();
+                _dbSemaphore.Release();
             }
         }
 

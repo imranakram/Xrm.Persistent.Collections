@@ -24,8 +24,18 @@ Fixes a high-severity vulnerability in the bundled native SQLite binary and remo
 
 ### Changed
 - `SQLitePCLRaw.bundle_e_sqlite3` 2.1.11 → 2.1.13, so the version built against and the published floor agree.
-- Package version 2.2026.3.1 → 2.2026.9.7, and assembly version 2.2026.3.2 → 2.2026.9.7. These had drifted apart: the published 2.2026.3.1 package contained an assembly stamped 2.2026.3.2.
+- Package version 2.2026.3.1 → 2.2026.9.7.
+- **`AssemblyVersion` is now pinned to `2.0.0.0`** and no longer tracks the CalVer release. It is the identity the CLR binds against, so bumping it every release forced every consuming application to add or update a binding redirect just to take a patch. `AssemblyFileVersion` carries the real release version (`2.2026.9.7`). `AssemblyVersion` will change only on a breaking release.
+  - Previously these had also drifted: the published 2.2026.3.1 package contained an assembly stamped 2.2026.3.2.
+  - **Consumers upgrading from 2.2026.3.1 can remove any binding redirect** they were carrying for this assembly, or point it at `2.0.0.0`.
 - Copyright updated to 2019-2026.
+
+### Fixed — Concurrency
+- **Reads were completely unsynchronized.** `PersistentBlobCache.Read()` executed against the shared `SQLiteConnection` while holding no lock, and writes held a separate `_writeSemaphore`. sqlite-net's `SQLiteConnection` is not thread-safe and this class holds a single connection, so a read could run against a connection a concurrent write was mutating. Reads and writes now share one `_dbSemaphore`, so every operation against the connection is serialized.
+- **A throwing `WaitAsync` could corrupt the semaphore count.** `CreateConnection()` and `Write()` both acquired their semaphore *inside* the `try`, so if the wait threw — `ObjectDisposedException` after `Dispose()`, for example — the `finally` released a permit that had never been taken. The acquire now happens before the `try`. Calls made after `Dispose()` now surface a clean `ObjectDisposedException` instead of leaving the semaphore in a corrupt state.
+- **The connection was published before it was initialised.** `CreateConnection()` assigned `_db` and only then set the journal mode and created the schema. A caller reaching the non-null fast path in between could query a `CacheItem` table that did not exist yet. The connection is now built in a local and assigned only once the schema is in place.
+- **`GetObjectsCreatedAt<T>()` walked its `keys` argument twice without materializing it**, so a single-use sequence (an iterator, a `yield return` method, a LINQ chain over a stream) silently came back empty the second time and produced a partial result. Now materialized once.
+- **`Get(IEnumerable<string>, string)` and `GetObjectsCreatedAt<T>()` issued every query twice.** Both built a lazy `IEnumerable<Task<…>>`, awaited it with `Task.WhenAll`, then re-enumerated it via `.Result` — which created a fresh set of tasks and re-ran every chunked query against the database. Both sequences are now materialized with `.ToArray()` before being awaited.
 
 ### Fixed
 - `.nuspec` `<repository>` metadata declared branch `main`; the repository's default branch is `master`.
@@ -33,10 +43,14 @@ Fixes a high-severity vulnerability in the bundled native SQLite binary and remo
 ### Performance
 - **No measurable change is expected, and none is claimed.** The two removed packages were never loaded at runtime. The SQLite 3.49.1 → 3.53.3 jump is four minor releases of incremental query-planner work that this library's access pattern does not exercise — reads are single-row primary-key lookups against a `WITHOUT ROWID` table, and writes are already batched inside transactions. `sqlite-net-pcl` is unchanged at 1.9.172.
 
+### Added
+- Five tests covering the concurrency fixes: mixed concurrent reads and writes, concurrent operations against an unopened connection, concurrent `CreateConnection()` calls, bulk `Get` across multiple internal chunks, and single-use-sequence handling in `GetCreatedAt`. The last of these fails against the pre-fix code; the others are stress coverage and do not deterministically reproduce a race.
+
 ### Verified
 - Clean restore with both removed packages physically absent from the restore folder — NuGet never requested them.
 - `Rebuild` succeeds in both Debug and Release (x64).
-- 43/43 unit tests pass.
+- 48/48 unit tests pass, stable across repeated runs.
+- The built assembly stamps `AssemblyVersion 2.0.0.0` and `FileVersion 2.2026.9.7`.
 - The deployed `e_sqlite3.dll` reports SQLite 3.53.3.
 - A NuGet audit across all remaining packages in both projects reports no known vulnerabilities at any severity.
 
