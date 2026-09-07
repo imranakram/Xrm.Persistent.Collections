@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2026.9.7] - 2026-09-07
+
+### 🔒 Security Release
+
+Fixes a high-severity vulnerability in the bundled native SQLite binary and removes two packages that nothing depended on. No API changes, and existing database files are unaffected — this is a drop-in upgrade.
+
+### Security
+- **CVE-2025-6965 / [GHSA-2m69-gcr7-jv3q](https://github.com/advisories/GHSA-2m69-gcr7-jv3q)** (High, CVSS 7.2) — upgraded `SQLitePCLRaw.lib.e_sqlite3` from 2.1.11 to 2.1.13.
+  - 2.1.11 embeds SQLite **3.49.1**. The flaw — the number of aggregate terms exceeding the available column count, leading to memory corruption — is fixed in SQLite **3.50.2**. 2.1.13 embeds SQLite **3.53.3**.
+  - Chosen over the 3.x line deliberately: 2.1.13 carries native assets only (no managed assembly), keeps the same `buildTransitive/net461` package layout as 2.1.11, and needs no binding-redirect changes.
+- **Raised the published dependency floors so consumers actually receive the fix.** The package previously floored `SQLitePCLRaw.bundle_e_sqlite3` at 2.1.10. Because NuGet resolves lowest-applicable, downstream projects were pulling `lib.e_sqlite3` **2.1.10** — older than what this library was built against, and vulnerable. The floor is now 2.1.13, plus an explicit `SQLitePCLRaw.lib.e_sqlite3 >= 2.1.13` entry so no resolution path can select an unpatched native binary.
+  - **Projects referencing this package should upgrade**; bumping only the transitive package is not sufficient if they pinned the old floor.
+
+### Removed
+- **`Microsoft.IdentityModel` 7.0.0** — Windows Identity Foundation 3.5, a `lib/net35` assembly superseded by WIF's integration into .NET 4.5. Nothing depended on it: no package in the graph declared it, no source file used it, and the built assembly carried zero references to it. `Microsoft.Xrm.Sdk` references `System.IdentityModel` — the BCL assembly, already satisfied by the framework reference — not `microsoft.identitymodel`, which is the likely origin of the confusion.
+- **`SQLitePCLRaw.config.e_sqlite3` 3.0.2** — sat amid an otherwise-2.1.11 stack with nothing depending on it at that version. It shipped a second copy of `SQLitePCLRaw.batteries_v2.dll` that conflicted with the 2.1.11 copy the projects actually reference from `bundle_green`, and triggered a package-downgrade error under modern resolution.
+
+### Changed
+- `SQLitePCLRaw.bundle_e_sqlite3` 2.1.11 → 2.1.13, so the version built against and the published floor agree.
+- Package version 2.2026.3.1 → 2.2026.9.7, and assembly version 2.2026.3.2 → 2.2026.9.7. These had drifted apart: the published 2.2026.3.1 package contained an assembly stamped 2.2026.3.2.
+- Copyright updated to 2019-2026.
+
+### Fixed
+- `.nuspec` `<repository>` metadata declared branch `main`; the repository's default branch is `master`.
+
+### Performance
+- **No measurable change is expected, and none is claimed.** The two removed packages were never loaded at runtime. The SQLite 3.49.1 → 3.53.3 jump is four minor releases of incremental query-planner work that this library's access pattern does not exercise — reads are single-row primary-key lookups against a `WITHOUT ROWID` table, and writes are already batched inside transactions. `sqlite-net-pcl` is unchanged at 1.9.172.
+
+### Verified
+- Clean restore with both removed packages physically absent from the restore folder — NuGet never requested them.
+- `Rebuild` succeeds in both Debug and Release (x64).
+- 43/43 unit tests pass.
+- The deployed `e_sqlite3.dll` reports SQLite 3.53.3.
+- A NuGet audit across all remaining packages in both projects reports no known vulnerabilities at any severity.
+
+---
+
 ## [2.0.0] - 2025-01-XX
 
 ### 🎉 Major Release - .NET Framework 4.8 Upgrade
@@ -142,6 +179,7 @@ using Xrm.Persistent.Collections;
 | From Version | To Version | Breaking Changes | Migration Effort | Database Compatible |
 |--------------|------------|------------------|------------------|---------------------|
 | 1.2022.10.3 | 2.2025.1.15 | Namespace only | Low (1-2 hours) | ✅ Yes |
+| 2.2026.3.1 | 2.2026.9.7 | None | None (drop-in) | ✅ Yes |
 
 
 ---

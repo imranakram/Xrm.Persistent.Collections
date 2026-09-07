@@ -33,5 +33,5 @@ using System.Runtime.InteropServices;
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
 // Using CalVer format: MAJOR.YYYY.M.D (e.g., 2.2026.3.2S)
-[assembly: AssemblyVersion("2.2026.3.2")]
-[assembly: AssemblyFileVersion("2.2026.3.2")]
+[assembly: AssemblyVersion("2.2026.9.7")]
+[assembly: AssemblyFileVersion("2.2026.9.7")]
