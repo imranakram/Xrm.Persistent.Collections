@@ -439,9 +439,12 @@ Entities are serialized in a compact, readable format:
 ### Key Dependencies
 | Package | Version | Purpose |
 |---------|---------|---------|
-| Xrm.Json.Serialization | 1.2026.3.1 | CRM entity serialization |
+| Xrm.Json.Serialization | 1.2026.9 | CRM entity serialization |
 | sqlite-net-pcl | 1.9.172 | SQLite ORM |
-| SQLitePCLRaw.bundle_e_sqlite3 | 2.1.10 | Native SQLite bindings |
+| SQLitePCLRaw.bundle_green | 2.1.11 | Provider initialisation (`batteries_v2`) |
+| SQLitePCLRaw.core | 2.1.11 | Managed SQLite core |
+| SQLitePCLRaw.provider.dynamic_cdecl | 2.1.11 | Native binding shim |
+| SQLitePCLRaw.lib.e_sqlite3 | 2.1.13 | Native SQLite binary (SQLite 3.53.3, CVE-2025-6965 floor) |
 | Newtonsoft.Json | 13.0.4 | JSON serialization |
 | Microsoft.CrmSdk.CoreAssemblies | 9.0.2.60 | Dynamics 365 SDK |
 
@@ -605,7 +608,7 @@ round trips rather than in rows. Measured on .NET Framework 4.8 x64, 100 000 key
 
 For scale, raw SQLite for the same 100 000 rows is ~12 s in blocks of 1 000 and ~2 s in one
 transaction — so on the write side the cost was never the database. It was JSON serialization,
-which is why the `Xrm.Json.Serialization` 1.2026.9.0 floor matters as much as the batching does.
+which is why the `Xrm.Json.Serialization` 1.2026.9 floor matters as much as the batching does.
 
 ### Performance Tips
 - Use `GetRange()` / `SetRange()` instead of a per-key loop — this is the single biggest win
@@ -682,4 +685,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-*Version: 2.0.0+ | Framework: .NET Framework 4.8 | License: MIT | Tests: 43 passing*
+*Version: 2.2026.9.8 | Assembly: 2.0.0.0 | Framework: .NET Framework 4.8 | License: MIT | Tests: 62 passing*

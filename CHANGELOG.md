@@ -38,10 +38,29 @@ existing database files are unaffected.
   already exists.
 
 ### Changed
-- **`Xrm.Json.Serialization` floor raised from 1.2026.3.1 to 1.2026.9.0.** 1.2026.9.0 fixes a
+- **`Xrm.Json.Serialization` floor raised from 1.2026.3.1 to 1.2026.9.** That release fixes a
   per-call `ContractResolver` allocation that was discarding Newtonsoft's contract cache and
   re-resolving every type by reflection on every entity. Because NuGet resolves lowest-applicable,
-  the floor has to move or downstream projects keep restoring the slow version.
+  the floor has to move or downstream projects keep restoring the slow version. The `.nuspec`
+  declares `1.2026.9`, which is how NuGet normalizes and restores the published `1.2026.9.0`.
+- **Restored `oldVersion="0.0.0.0-3.0.0.0"` on the `SQLitePCLRaw.core` and
+  `SQLitePCLRaw.batteries_v2` binding redirects** in both `app.config` files. Taking the serializer
+  bump let Visual Studio rewrite the redirects, and its generator only ever writes an
+  up-to-installed range — which silently narrowed these back to `0.0.0.0-2.1.11.2622` and removed
+  the headroom that keeps a 1.x or 3.x reference elsewhere in a consumer's graph from surfacing as
+  a `TypeLoadException`. `Xrm.Persistent.Collections/app.config` is documentary for consumers; the
+  test project's copy is the one that applies at runtime.
+- A `System.ValueTuple` redirect that Visual Studio added in the same pass is a genuine dependency
+  here and is kept.
+
+### Removed
+- **`SQLitePCLRaw.provider.e_sqlite3`** — unused, no runtime impact. Reading the assembly
+  references out of the built DLLs shows the managed chain is `SQLite-net` → `batteries_v2` +
+  `core`, and `batteries_v2` → `core` + `provider.dynamic_cdecl`. Nothing references
+  `provider.e_sqlite3`, which belongs to the unused `bundle_e_sqlite3`; `bundle_green` is what
+  supplies the initialisation path. Removed from both `packages.config` files, both `Reference`
+  blocks and the `CopySQLitePclRawAssemblies` target, whose literal `Include` would otherwise have
+  failed the `Copy` task.
 
 ### Performance
 Measured on .NET Framework 4.8 x64, 100 000 keys holding `IList<Entity>` of five attributes each,
@@ -58,6 +77,18 @@ the serializer upgrade addresses. The two together are what turn a ~3 minute pas
 
 For reference, the SQLite floor for the same 100 000 rows against the real `CacheItem` schema is
 ~12 s in blocks of 1 000, and ~2 s in a single transaction.
+
+### Verified
+- Clean rebuild of Debug/AnyCPU and of x64/Release — the configuration the `.nuspec` packs from.
+- Both outputs carry exactly one version of each assembly: `SQLite-net` 1.9.172.0, and
+  `batteries_v2`, `core` and `provider.dynamic_cdecl` all at 2.1.11.2622, with no
+  `provider.e_sqlite3`.
+- 62/62 unit tests pass in both configurations.
+- The built assembly stamps `AssemblyVersion 2.0.0.0` and `FileVersion 2.2026.9.8`.
+- Packing the `.nuspec` locally produces a `lib/net48` assembly exporting `IBulkDictionary<T>`,
+  `DictionaryExtensions`, `GetRange` and `SetRange`, with all eight dependency floors as declared.
+
+---
 
 ## [2.2026.9.7] - 2026-09-07
 
