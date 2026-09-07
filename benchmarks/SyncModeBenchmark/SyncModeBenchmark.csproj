@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>SyncModeBenchmark</AssemblyName>
+    <RootNamespace>SyncModeBenchmark</RootNamespace>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <Optimize>true</Optimize>
+    <!-- Deliberately not part of Xrm.Persistent.Collections.sln, so CI is unaffected. -->
+  </PropertyGroup>
+
+  <!-- Exactly the dependency set the .nuspec declares, at the same floors, so the
+       benchmark exercises the stack a consumer of this library actually gets. -->
+  <ItemGroup>
+    <PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
+    <PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
+    <PackageReference Include="SQLitePCLRaw.core" Version="2.1.11" />
+    <PackageReference Include="SQLitePCLRaw.provider.dynamic_cdecl" Version="2.1.11" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.13" />
+  </ItemGroup>
+
+  <!-- Optional control run against the real PersistentBlobCache. Builds without it if
+       the solution has not been built; the benchmark then skips that one measurement. -->
+  <PropertyGroup>
+    <LibraryDll>$(MSBuildThisFileDirectory)..\..\Xrm.Persistent.Collections\bin\x64\Release\Xrm.Persistent.Collections.dll</LibraryDll>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="Exists('$(LibraryDll)')">
+    <DefineConstants>$(DefineConstants);HAVE_LIBRARY</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(LibraryDll)')">
+    <Reference Include="Xrm.Persistent.Collections">
+      <HintPath>$(LibraryDll)</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
