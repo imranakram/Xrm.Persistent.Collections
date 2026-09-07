@@ -82,7 +82,7 @@
         <!-- Assemblies this library references directly. -->
         <dependency id="Newtonsoft.Json" version="13.0.4" />
         <dependency id="sqlite-net-pcl" version="1.9.172" />
-        <dependency id="Xrm.Json.Serialization" version="1.2026.9.0" />
+        <dependency id="Xrm.Json.Serialization" version="1.2026.9" />
 
         <!-- Dynamics types cross this library's API surface through serialization.
              Declared explicitly rather than leaned on transitively, because it also
