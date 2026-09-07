@@ -297,3 +297,6 @@ __pycache__/
 /CALVER_GUIDE.md
 /CALVER_SUMMARY.md
 /VERSIONING_STRATEGY.md
+
+# Claude Code workspace settings
+.claude/

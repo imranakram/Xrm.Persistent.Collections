@@ -400,8 +400,14 @@ using (var dict = new LocalDictionary<Entity>("data.db"))
 
 ## 📚 Dependencies & Compatibility
 
-### Xrm.Json.Serialization v1.2026.3.1
+### Xrm.Json.Serialization v1.2026.9.0
 This library uses the latest version of Xrm.Json.Serialization with major enhancements:
+
+#### Serialization Performance
+1.2026.9.0 fixes a per-call `ContractResolver` allocation that was discarding Newtonsoft's
+contract cache and re-resolving every type by reflection on every entity. Serializing 100 000
+single-entity lists went from 82.31 s to 0.34 s, with byte-identical output. Nothing in the
+JSON format or the public API changed.
 
 #### New Data Type Support
 - **AliasedValue**: FetchXML queries with linked entities are now fully supported
@@ -433,9 +439,12 @@ Entities are serialized in a compact, readable format:
 ### Key Dependencies
 | Package | Version | Purpose |
 |---------|---------|---------|
-| Xrm.Json.Serialization | 1.2026.3.1 | CRM entity serialization |
+| Xrm.Json.Serialization | 1.2026.9 | CRM entity serialization |
 | sqlite-net-pcl | 1.9.172 | SQLite ORM |
-| SQLitePCLRaw.bundle_e_sqlite3 | 2.1.10 | Native SQLite bindings |
+| SQLitePCLRaw.bundle_green | 2.1.11 | Provider initialisation (`batteries_v2`) |
+| SQLitePCLRaw.core | 2.1.11 | Managed SQLite core |
+| SQLitePCLRaw.provider.dynamic_cdecl | 2.1.11 | Native binding shim |
+| SQLitePCLRaw.lib.e_sqlite3 | 2.1.13 | Native SQLite binary (SQLite 3.53.3, CVE-2025-6965 floor) |
 | Newtonsoft.Json | 13.0.4 | JSON serialization |
 | Microsoft.CrmSdk.CoreAssemblies | 9.0.2.60 | Dynamics 365 SDK |
 
@@ -479,6 +488,43 @@ foreach (var kvp in dict)
 dict.Clear();
 dict.Dispose();
 ```
+
+### Bulk Operations
+
+`LocalDictionary<T>` implements `IBulkDictionary<T>`, which reads and writes many keys per
+round trip instead of one:
+
+```csharp
+using Xrm.Persistent.Collections.Interfaces;
+
+// Read many keys in one go. Keys that are not present are omitted from the result,
+// the same way TryGetValue reports a miss. Duplicate keys collapse to one entry.
+IDictionary<string, Entity> found = dict.GetRange(new[] { "a", "b", "c" });
+
+// Write many keys in one go. Existing keys are replaced, like the indexer setter.
+dict.SetRange(new Dictionary<string, Entity>
+{
+    ["a"] = first,
+    ["b"] = second
+});
+```
+
+If you hold the value as an `IDictionary<string, T>` — so you cannot tell whether it is an
+in-memory dictionary or a persistent one — use the extension methods instead. They take the
+batch path when the target supports it and fall back to a per-key loop when it does not:
+
+```csharp
+using Xrm.Persistent.Collections;
+
+IDictionary<string, Entity> maybePersistent = GetCache();
+
+var found = maybePersistent.GetRange(keys);   // batched if persistent, looped if not
+maybePersistent.SetRange(items);              // same
+```
+
+Batch in blocks rather than passing 100 000 keys at once. The backend chunks at 950 keys per
+SQL statement, but the whole result set is materialised in memory, so a block of about 1 000
+keeps both bounded.
 
 ### Cache Introspection Methods
 ```csharp
@@ -549,8 +595,24 @@ var errorLog = new LocalDictionary<Entity>("errors.db");
 - **Concurrent reads**: Excellent (WAL mode)
 - **Concurrent writes**: Serialized (SQLite limitation)
 
+### Per-key access does not scale
+
+Every indexer or `ContainsKey` call is its own SQL round trip, so a per-key loop is linear in
+round trips rather than in rows. Measured on .NET Framework 4.8 x64, 100 000 keys holding an
+`IList<Entity>` of five attributes each, warm database:
+
+| | Per-key loop | `GetRange` / `SetRange` in blocks of 1 000 |
+|---|---|---|
+| Reads | ~92 s | **1.27 s** |
+| Writes | ~78 s | **~3 s** |
+
+For scale, raw SQLite for the same 100 000 rows is ~12 s in blocks of 1 000 and ~2 s in one
+transaction — so on the write side the cost was never the database. It was JSON serialization,
+which is why the `Xrm.Json.Serialization` 1.2026.9 floor matters as much as the batching does.
+
 ### Performance Tips
-- Batch writes when possible
+- Use `GetRange()` / `SetRange()` instead of a per-key loop — this is the single biggest win
+- Batch in blocks of about 1 000 keys rather than one call for everything
 - Avoid enumerating `Values` for large datasets
 - Use `ContainsKey()` instead of `TryGetValue()` when you only need existence check
 - Keep entity sizes reasonable (<1 MB per entity)
@@ -623,4 +685,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-*Version: 2.0.0+ | Framework: .NET Framework 4.8 | License: MIT | Tests: 43 passing*
+*Version: 2.2026.9.8 | Assembly: 2.0.0.0 | Framework: .NET Framework 4.8 | License: MIT | Tests: 62 passing*

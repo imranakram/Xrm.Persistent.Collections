@@ -5,6 +5,91 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2026.9.8] - 2026-09-07
+
+### Performance Release
+
+Adds a batch read/write API and picks up a ~240x serialization fix from `Xrm.Json.Serialization`.
+No breaking changes: `LocalDictionary<T>` keeps its full `IDictionary<string, T>` surface and
+existing database files are unaffected.
+
+### Added
+- **`IBulkDictionary<T>`** (`Xrm.Persistent.Collections.Interfaces`) — `GetRange(IEnumerable<string> keys)`
+  and `SetRange(IDictionary<string, T> items)`. Deliberately a separate interface from `IDictionary`,
+  so a consumer holding only the interface can test for it and fall back.
+- **`LocalDictionary<T>` implements `IBulkDictionary<T>`**, routing both members to the batch
+  operations `PersistentBlobCache` already had (`Get(IEnumerable<string>)` and
+  `Insert(IDictionary<string, byte[]>)`), which chunk at 950 keys per statement.
+- **`DictionaryExtensions.GetRange` / `SetRange`** — extension methods on `IDictionary<string, T>`
+  that take the batch path when the target implements `IBulkDictionary<T>` and fall back to a
+  per-key loop otherwise. This lets a caller that holds an `IDictionary<string, T>` — not knowing
+  whether it is in memory or persistent — get the batch behaviour without a type check.
+- 13 tests in `BulkDictionaryTests` covering the interface fast path, the loop fallback, duplicate
+  key collapsing, missing keys, chunk-boundary crossing at 2 000 keys, agreement with per-key
+  `TryGetValue`, CRM attribute round trips, replacement semantics and null argument rejection.
+
+### Contract notes
+- `GetRange` **omits** keys it did not find, matching `TryGetValue` per key rather than returning a
+  placeholder. Duplicate keys in the input collapse to one entry.
+- The backend returns an empty buffer for a key it did not find, so absence and "stored an empty
+  blob" are indistinguishable at that layer. `GetRange` treats both as a miss — the same as
+  `ContainsKey` and `TryGetValue` already do.
+- `SetRange` replaces existing keys like the indexer setter, and does not throw on a key that
+  already exists.
+
+### Changed
+- **`Xrm.Json.Serialization` floor raised from 1.2026.3.1 to 1.2026.9.** That release fixes a
+  per-call `ContractResolver` allocation that was discarding Newtonsoft's contract cache and
+  re-resolving every type by reflection on every entity. Because NuGet resolves lowest-applicable,
+  the floor has to move or downstream projects keep restoring the slow version. The `.nuspec`
+  declares `1.2026.9`, which is how NuGet normalizes and restores the published `1.2026.9.0`.
+- **Restored `oldVersion="0.0.0.0-3.0.0.0"` on the `SQLitePCLRaw.core` and
+  `SQLitePCLRaw.batteries_v2` binding redirects** in both `app.config` files. Taking the serializer
+  bump let Visual Studio rewrite the redirects, and its generator only ever writes an
+  up-to-installed range — which silently narrowed these back to `0.0.0.0-2.1.11.2622` and removed
+  the headroom that keeps a 1.x or 3.x reference elsewhere in a consumer's graph from surfacing as
+  a `TypeLoadException`. `Xrm.Persistent.Collections/app.config` is documentary for consumers; the
+  test project's copy is the one that applies at runtime.
+- A `System.ValueTuple` redirect that Visual Studio added in the same pass is a genuine dependency
+  here and is kept.
+
+### Removed
+- **`SQLitePCLRaw.provider.e_sqlite3`** — unused, no runtime impact. Reading the assembly
+  references out of the built DLLs shows the managed chain is `SQLite-net` → `batteries_v2` +
+  `core`, and `batteries_v2` → `core` + `provider.dynamic_cdecl`. Nothing references
+  `provider.e_sqlite3`, which belongs to the unused `bundle_e_sqlite3`; `bundle_green` is what
+  supplies the initialisation path. Removed from both `packages.config` files, both `Reference`
+  blocks and the `CopySQLitePclRawAssemblies` target, whose literal `Include` would otherwise have
+  failed the `Copy` task.
+
+### Performance
+Measured on .NET Framework 4.8 x64, 100 000 keys holding `IList<Entity>` of five attributes each,
+against a warm database:
+
+| | Per-key loop | `GetRange` / `SetRange` in blocks of 1 000 |
+|---|---|---|
+| Reads | ~92 s | **1.27 s** |
+| Writes | ~78 s | 75.94 s → **~3 s** with `Xrm.Json.Serialization` 1.2026.9.0 |
+
+Batching alone is ~2.2x end to end (170 s → 77 s) and all but eliminates the read cost. The write
+side was dominated not by SQLite but by JSON serialization — 74 of those 76 seconds — which is what
+the serializer upgrade addresses. The two together are what turn a ~3 minute pass into a few seconds.
+
+For reference, the SQLite floor for the same 100 000 rows against the real `CacheItem` schema is
+~12 s in blocks of 1 000, and ~2 s in a single transaction.
+
+### Verified
+- Clean rebuild of Debug/AnyCPU and of x64/Release — the configuration the `.nuspec` packs from.
+- Both outputs carry exactly one version of each assembly: `SQLite-net` 1.9.172.0, and
+  `batteries_v2`, `core` and `provider.dynamic_cdecl` all at 2.1.11.2622, with no
+  `provider.e_sqlite3`.
+- 62/62 unit tests pass in both configurations.
+- The built assembly stamps `AssemblyVersion 2.0.0.0` and `FileVersion 2.2026.9.8`.
+- Packing the `.nuspec` locally produces a `lib/net48` assembly exporting `IBulkDictionary<T>`,
+  `DictionaryExtensions`, `GetRange` and `SetRange`, with all eight dependency floors as declared.
+
+---
+
 ## [2.2026.9.7] - 2026-09-07
 
 ### 🔒 Security Release

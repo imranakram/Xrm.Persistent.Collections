@@ -40,4 +40,4 @@ using System.Runtime.InteropServices;
 //
 // AssemblyFileVersion carries the real release version, in CalVer: MAJOR.YYYY.M.D.
 [assembly: AssemblyVersion("2.0.0.0")]
-[assembly: AssemblyFileVersion("2.2026.9.7")]
+[assembly: AssemblyFileVersion("2.2026.9.8")]

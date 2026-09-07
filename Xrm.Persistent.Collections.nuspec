@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata>
     <id>Xrm.Persistent.Collections</id>
-    <version>2.2026.9.7</version>
+    <version>2.2026.9.8</version>
     <title>Xrm Persistent Collections</title>
     <authors>Imran Akram</authors>
     <owners>Imran Akram</owners>
@@ -22,56 +22,65 @@
     </description>
     <summary>Persistent dictionary storage for Dynamics CRM/XRM with SQLite backend</summary>
     <releaseNotes>
-      Security release. No API changes; existing database files are unaffected.
+      Performance release. Adds a batch read/write API and picks up a ~240x serialization
+      fix from Xrm.Json.Serialization. No breaking changes: LocalDictionary keeps its full
+      IDictionary surface, AssemblyVersion stays 2.0.0.0 so no binding redirect changes are
+      needed, and existing database files are unaffected.
 
-      Version Format: CalVer (2.YYYY.M.D) - Previous version: 2.2026.3.1
+      Version Format: CalVer (2.YYYY.M.D) - Previous version: 2.2026.9.7
 
-      Security:
-      - Fixes CVE-2025-6965 / GHSA-2m69-gcr7-jv3q (High, CVSS 7.2) by upgrading
-        SQLitePCLRaw.lib.e_sqlite3 from 2.1.11 to 2.1.13. The 2.1.11 package embeds
-        SQLite 3.49.1; the flaw is fixed in SQLite 3.50.2, and 2.1.13 embeds 3.53.3.
-      - Raises the SQLitePCLRaw.bundle_e_sqlite3 floor from 2.1.10 to 2.1.13 and adds an
-        explicit SQLitePCLRaw.lib.e_sqlite3 floor. Because NuGet resolves lowest-applicable,
-        consumers of the previous release were pulling an unpatched native binary. Projects
-        referencing this package should upgrade.
+      Added:
+      - IBulkDictionary&lt;T&gt; (Xrm.Persistent.Collections.Interfaces) with
+        GetRange(IEnumerable&lt;string&gt; keys) and SetRange(IDictionary&lt;string, T&gt; items).
+        Deliberately a separate interface from IDictionary, so a consumer holding only the
+        interface can test for it and fall back.
+      - LocalDictionary&lt;T&gt; implements IBulkDictionary&lt;T&gt;, routing both members to the
+        batch operations PersistentBlobCache already had, which chunk at 950 keys per
+        statement and write inside a single transaction.
+      - DictionaryExtensions.GetRange / SetRange, extension methods on
+        IDictionary&lt;string, T&gt; that take the batch path when the target implements
+        IBulkDictionary&lt;T&gt; and fall back to a per-key loop otherwise. A caller that does
+        not know whether its dictionary is in memory or persistent gets the batch behaviour
+        without a type check.
+      - 13 tests covering the fast path, the loop fallback, duplicate key collapsing, missing
+        keys, chunk-boundary crossing at 2 000 keys, agreement with per-key TryGetValue, CRM
+        attribute round trips, replacement semantics and null argument rejection.
+
+      Contract notes:
+      - GetRange omits keys it did not find, matching TryGetValue per key rather than
+        returning a placeholder, so the result can be shorter than the input. Duplicate keys
+        collapse to one entry.
+      - SetRange replaces existing keys like the indexer setter, and does not throw on a key
+        that already exists.
+
+      Performance (.NET Framework 4.8 x64, 100 000 keys holding IList&lt;Entity&gt; of five
+      attributes each, warm database):
+      - Reads:  ~92 s per-key loop -> 1.27 s with GetRange in blocks of 1 000.
+      - Writes: ~78 s per-key loop -> ~3 s with SetRange plus Xrm.Json.Serialization 1.2026.9.
+      Batching alone is ~2.2x end to end and all but eliminates the read cost. The write side
+      was dominated by JSON serialization rather than SQLite, which is what the serializer
+      upgrade addresses.
+
+      Changed:
+      - Xrm.Json.Serialization floor raised from 1.2026.3.1 to 1.2026.9, which fixes a
+        per-call ContractResolver allocation that discarded Newtonsoft's contract cache and
+        re-resolved every type by reflection on every entity. Because NuGet resolves
+        lowest-applicable, the floor has to move or downstream projects keep restoring the
+        slow version.
 
       Removed (unused, no runtime impact):
-      - Microsoft.IdentityModel 7.0.0 (Windows Identity Foundation 3.5, superseded by WIF's
-        integration into .NET 4.5). Nothing in the graph or the source depended on it.
-      - SQLitePCLRaw.config.e_sqlite3 3.0.2, which shipped a conflicting second copy of
-        SQLitePCLRaw.batteries_v2.dll.
+      - SQLitePCLRaw.provider.e_sqlite3. Reading the assembly references out of the built
+        DLLs shows the managed chain is SQLite-net -> batteries_v2 + core, and batteries_v2
+        -> core + provider.dynamic_cdecl. Nothing references provider.e_sqlite3, which
+        belongs to the unused bundle_e_sqlite3; bundle_green supplies the initialisation
+        path.
 
-      Concurrency fixes:
-      - Reads are now serialized against writes. PersistentBlobCache.Read took no lock while
-        sharing a single non-thread-safe SQLiteConnection with writes.
-      - CreateConnection and Write acquired their semaphore inside the try block, so a
-        throwing WaitAsync released a permit that was never taken.
-      - CreateConnection published the connection before creating the schema, so a caller
-        could query a CacheItem table that did not exist yet.
-      - Get(IEnumerable) and GetObjectsCreatedAt re-enumerated a lazy task sequence, issuing
-        every chunked query against the database twice.
-      - GetObjectsCreatedAt walked its keys argument twice without materializing it, so a
-        single-use sequence produced a partial result.
-
-      AssemblyVersion is now pinned to 2.0.0.0 and no longer tracks the release version, so
-      consumers no longer need a binding redirect for each patch. AssemblyFileVersion carries
-      the release version. Consumers upgrading from 2.2026.3.1 can drop any existing binding
-      redirect for this assembly or retarget it to 2.0.0.0.
-
-      Package dependencies:
-      - The dependency list is rebuilt from the real reference graph. Declared floors that
-        sat below the versions built against have been dropped in favour of the transitive
-        versions Microsoft ships together; the SQLitePCLRaw managed stack (bundle_green,
-        core, provider.dynamic_cdecl) is now declared, since sqlite-net initialises its
-        provider through batteries_v2 and sqlite-net-pcl alone floors that at 2.1.2.
-      - SQLitePCLRaw.bundle_e_sqlite3 is no longer declared and has been removed from the
-        projects. Nothing referenced it, and it supplied a second conflicting copy of
-        SQLitePCLRaw.batteries_v2.dll.
-      - Verified by restoring this package into a fresh net48 project as its only
-        PackageReference and round-tripping a CRM Entity through a real database file.
-
-      Performance:
-      - No measurable change is expected or claimed from the dependency updates.
+      Consumers:
+      - No binding redirect change is required. If you maintain redirects for the SQLitePCLRaw
+        assemblies, an oldVersion range of 0.0.0.0-3.0.0.0 leaves headroom for a 1.x or 3.x
+        reference elsewhere in the graph to unify rather than surface as a TypeLoadException.
+        Note that Visual Studio's redirect generator only ever writes an up-to-installed
+        range, so it will narrow this again on the next package update.
 
       See CHANGELOG.md for full details.
     </releaseNotes>
@@ -82,7 +91,7 @@
         <!-- Assemblies this library references directly. -->
         <dependency id="Newtonsoft.Json" version="13.0.4" />
         <dependency id="sqlite-net-pcl" version="1.9.172" />
-        <dependency id="Xrm.Json.Serialization" version="1.2026.3.1" />
+        <dependency id="Xrm.Json.Serialization" version="1.2026.9" />
 
         <!-- Dynamics types cross this library's API surface through serialization.
              Declared explicitly rather than leaned on transitively, because it also
