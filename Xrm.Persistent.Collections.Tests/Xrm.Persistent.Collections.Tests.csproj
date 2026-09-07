@@ -200,6 +200,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BulkDictionaryTests.cs" />
     <Compile Include="LocalDictionaryTests.cs" />
     <Compile Include="PersistentBlobCacheTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

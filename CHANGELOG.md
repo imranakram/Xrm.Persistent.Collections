@@ -5,6 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2026.9.8] - 2026-09-07
+
+### Performance Release
+
+Adds a batch read/write API and picks up a ~240x serialization fix from `Xrm.Json.Serialization`.
+No breaking changes: `LocalDictionary<T>` keeps its full `IDictionary<string, T>` surface and
+existing database files are unaffected.
+
+### Added
+- **`IBulkDictionary<T>`** (`Xrm.Persistent.Collections.Interfaces`) — `GetRange(IEnumerable<string> keys)`
+  and `SetRange(IDictionary<string, T> items)`. Deliberately a separate interface from `IDictionary`,
+  so a consumer holding only the interface can test for it and fall back.
+- **`LocalDictionary<T>` implements `IBulkDictionary<T>`**, routing both members to the batch
+  operations `PersistentBlobCache` already had (`Get(IEnumerable<string>)` and
+  `Insert(IDictionary<string, byte[]>)`), which chunk at 950 keys per statement.
+- **`DictionaryExtensions.GetRange` / `SetRange`** — extension methods on `IDictionary<string, T>`
+  that take the batch path when the target implements `IBulkDictionary<T>` and fall back to a
+  per-key loop otherwise. This lets a caller that holds an `IDictionary<string, T>` — not knowing
+  whether it is in memory or persistent — get the batch behaviour without a type check.
+- 13 tests in `BulkDictionaryTests` covering the interface fast path, the loop fallback, duplicate
+  key collapsing, missing keys, chunk-boundary crossing at 2 000 keys, agreement with per-key
+  `TryGetValue`, CRM attribute round trips, replacement semantics and null argument rejection.
+
+### Contract notes
+- `GetRange` **omits** keys it did not find, matching `TryGetValue` per key rather than returning a
+  placeholder. Duplicate keys in the input collapse to one entry.
+- The backend returns an empty buffer for a key it did not find, so absence and "stored an empty
+  blob" are indistinguishable at that layer. `GetRange` treats both as a miss — the same as
+  `ContainsKey` and `TryGetValue` already do.
+- `SetRange` replaces existing keys like the indexer setter, and does not throw on a key that
+  already exists.
+
+### Changed
+- **`Xrm.Json.Serialization` floor raised from 1.2026.3.1 to 1.2026.9.0.** 1.2026.9.0 fixes a
+  per-call `ContractResolver` allocation that was discarding Newtonsoft's contract cache and
+  re-resolving every type by reflection on every entity. Because NuGet resolves lowest-applicable,
+  the floor has to move or downstream projects keep restoring the slow version.
+
+### Performance
+Measured on .NET Framework 4.8 x64, 100 000 keys holding `IList<Entity>` of five attributes each,
+against a warm database:
+
+| | Per-key loop | `GetRange` / `SetRange` in blocks of 1 000 |
+|---|---|---|
+| Reads | ~92 s | **1.27 s** |
+| Writes | ~78 s | 75.94 s → **~3 s** with `Xrm.Json.Serialization` 1.2026.9.0 |
+
+Batching alone is ~2.2x end to end (170 s → 77 s) and all but eliminates the read cost. The write
+side was dominated not by SQLite but by JSON serialization — 74 of those 76 seconds — which is what
+the serializer upgrade addresses. The two together are what turn a ~3 minute pass into a few seconds.
+
+For reference, the SQLite floor for the same 100 000 rows against the real `CacheItem` schema is
+~12 s in blocks of 1 000, and ~2 s in a single transaction.
+
 ## [2.2026.9.7] - 2026-09-07
 
 ### 🔒 Security Release

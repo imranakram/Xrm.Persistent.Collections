@@ -6,10 +6,11 @@ namespace Xrm.Persistent.Collections
     using System.Linq;
     using System.Text;
     using Backend;
+    using Interfaces;
     using Newtonsoft.Json;
     using global::Xrm.Json.Serialization;
 
-    public class LocalDictionary<T> : IDictionary<string, T>, IDisposable
+    public class LocalDictionary<T> : IDictionary<string, T>, IBulkDictionary<T>, IDisposable
     {
         #region Private Fields
 
@@ -151,6 +152,30 @@ namespace Xrm.Persistent.Collections
         public void Dispose() =>
             cache.Dispose();
 
+        /// <inheritdoc/>
+        public IDictionary<string, T> GetRange(IEnumerable<string> keys)
+        {
+            var task = cache.Get(keys);
+            task.Wait();
+
+            var result = new Dictionary<string, T>();
+
+            foreach (var pair in task.Result)
+            {
+                // The backend returns an empty buffer for a key it did not find, so absence and
+                // "stored an empty blob" are indistinguishable at this layer. Treat both as a
+                // miss, which is what ContainsKey and TryGetValue already do.
+                if (pair.Value == null || pair.Value.Length == 0)
+                {
+                    continue;
+                }
+
+                result.Add(pair.Key, JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(pair.Value)));
+            }
+
+            return result;
+        }
+
         public IEnumerator<KeyValuePair<string, T>> GetEnumerator()
         {
             var keys = Keys;
@@ -187,6 +212,19 @@ namespace Xrm.Persistent.Collections
 
         public bool Remove(KeyValuePair<string, T> item) =>
             Remove(item.Key);
+
+        /// <inheritdoc/>
+        public void SetRange(IDictionary<string, T> items)
+        {
+            var payload = new Dictionary<string, byte[]>(items.Count);
+
+            foreach (var item in items)
+            {
+                payload.Add(item.Key, Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(item.Value)));
+            }
+
+            cache.Insert(payload).Wait();
+        }
 
         public bool TryGetValue(string key, out T value)
         {

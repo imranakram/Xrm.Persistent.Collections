@@ -1,8 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
   <metadata>
     <id>Xrm.Persistent.Collections</id>
-    <version>2.2026.9.7</version>
+    <version>2.2026.9.8</version>
     <title>Xrm Persistent Collections</title>
     <authors>Imran Akram</authors>
     <owners>Imran Akram</owners>
@@ -82,7 +82,7 @@
         <!-- Assemblies this library references directly. -->
         <dependency id="Newtonsoft.Json" version="13.0.4" />
         <dependency id="sqlite-net-pcl" version="1.9.172" />
-        <dependency id="Xrm.Json.Serialization" version="1.2026.3.1" />
+        <dependency id="Xrm.Json.Serialization" version="1.2026.9.0" />
 
         <!-- Dynamics types cross this library's API surface through serialization.
              Declared explicitly rather than leaned on transitively, because it also
