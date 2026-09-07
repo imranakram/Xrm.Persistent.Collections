@@ -79,9 +79,6 @@
       <HintPath>..\packages\Microsoft.CrmSdk.CoreAssemblies.9.0.2.60\lib\net462\Microsoft.Crm.Sdk.Proxy.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="microsoft.identitymodel, Version=3.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\Microsoft.IdentityModel.7.0.0\lib\net35\microsoft.identitymodel.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.TestPlatform.CoreUtilities, Version=15.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.TestPlatform.ObjectModel.17.10.0\lib\net462\Microsoft.TestPlatform.CoreUtilities.dll</HintPath>
     </Reference>
@@ -239,7 +236,7 @@
       <_SQLitePclRawAssemblies Include="$(MSBuildProjectDirectory)\..\packages\SQLitePCLRaw.provider.e_sqlite3.2.1.11\lib\netstandard2.0\SQLitePCLRaw.provider.e_sqlite3.dll" />
       <_SQLitePclRawAssemblies Include="$(MSBuildProjectDirectory)\..\packages\SQLitePCLRaw.provider.dynamic_cdecl.2.1.11\lib\netstandard2.0\SQLitePCLRaw.provider.dynamic_cdecl.dll" />
       <_SQLitePclRawAssemblies Include="$(MSBuildProjectDirectory)\..\packages\SQLitePCLRaw.bundle_green.2.1.11\lib\net461\SQLitePCLRaw.batteries_v2.dll" />
-      <_SQLitePclRawNative Include="$(MSBuildProjectDirectory)\..\packages\SQLitePCLRaw.lib.e_sqlite3.2.1.11\runtimes\win-x64\native\e_sqlite3.dll" />
+      <_SQLitePclRawNative Include="$(MSBuildProjectDirectory)\..\packages\SQLitePCLRaw.lib.e_sqlite3.2.1.13\runtimes\win-x64\native\e_sqlite3.dll" />
       <_AdditionalRuntimeAssemblies Include="$(MSBuildProjectDirectory)\..\packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll" />
     </ItemGroup>
     <Copy SourceFiles="@(_SQLitePclRawAssemblies)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(_SQLitePclRawAssemblies)' != ''" />

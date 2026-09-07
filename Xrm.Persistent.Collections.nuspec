@@ -46,7 +46,8 @@
         <dependency id="Microsoft.CrmSdk.CoreAssemblies" version="9.0.2.60" />
         <dependency id="Newtonsoft.Json" version="13.0.4" />
         <dependency id="sqlite-net-pcl" version="1.9.172" />
-        <dependency id="SQLitePCLRaw.bundle_e_sqlite3" version="2.1.10" />
+        <dependency id="SQLitePCLRaw.bundle_e_sqlite3" version="2.1.13" />
+        <dependency id="SQLitePCLRaw.lib.e_sqlite3" version="2.1.13" />
         <dependency id="System.Buffers" version="4.5.1" />
         <dependency id="System.Memory" version="4.5.5" />
         <dependency id="System.Numerics.Vectors" version="4.5.0" />
